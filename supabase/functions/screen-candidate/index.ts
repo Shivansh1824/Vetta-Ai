@@ -71,10 +71,11 @@ JSON SCHEMA:
 }`
 
     const parts = [{ text: prompt }]
-    const models = ['gemini-3.8-flash', 'gemini-3.6-flash']
+    const models = ['gemini-3.6-flash', 'gemini-3.8-flash']
 
     let resultRaw = ''
     let success = false
+    let lastError = ''
 
     for (const requestedModel of models) {
       const actualModel = requestedModel
@@ -95,7 +96,8 @@ JSON SCHEMA:
         })
 
         if (!res.ok) {
-          throw new Error(`API Error ${res.status}`)
+          const errText = await res.text()
+          throw new Error(`API Error ${res.status}: ${errText}`)
         }
 
         const data = await res.json()
@@ -103,32 +105,39 @@ JSON SCHEMA:
         resultRaw = Array.isArray(resParts) ? resParts.find((p: any) => typeof p.text === 'string')?.text : ''
         success = true
         break
-      } catch (err) {
+      } catch (err: any) {
+        lastError = err?.message || String(err)
         console.error(`Failed with model ${requestedModel}, error:`, err)
       }
     }
 
     if (!success && fallbackKey) {
       console.log("Trying fallback key...")
-      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${'gemini-3.8-flash'}:generateContent?key=${fallbackKey}`
-      const res = await fetch(fallbackUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 4096, response_mime_type: 'application/json' },
-        }),
-      })
-      if (res.ok) {
+      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${fallbackKey}`
+      try {
+        const res = await fetch(fallbackUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 4096, response_mime_type: 'application/json' },
+          }),
+        })
+        if (!res.ok) {
+          const errText = await res.text()
+          throw new Error(`Fallback API Error ${res.status}: ${errText}`)
+        }
         const data = await res.json()
         const resParts = data.candidates?.[0]?.content?.parts
         resultRaw = Array.isArray(resParts) ? resParts.find((p: any) => typeof p.text === 'string')?.text : ''
         success = true
+      } catch (err: any) {
+        lastError = err?.message || String(err)
       }
     }
 
     if (!success || !resultRaw) {
-      throw new Error("All model fallbacks and keys failed.")
+      throw new Error(`All model fallbacks and keys failed. Details: ${lastError}`)
     }
 
     // Parse output

@@ -72,7 +72,7 @@ Return ONLY valid JSON matching this schema:
     const contentPrompt = text ? `${prompt}\n\nDOCUMENT FILENAME: ${fileName || 'Uploaded Document'}\nDOCUMENT TEXT CONTENT:\n${text.substring(0, 12000)}` : prompt
     parts.push({ text: contentPrompt })
 
-    const models = ['gemini-3.8-flash', 'gemini-3.6-flash']
+    const models = ['gemini-3.6-flash', 'gemini-3.8-flash']
 
     let resultRaw = ''
     let success = false
@@ -111,7 +111,7 @@ Return ONLY valid JSON matching this schema:
 
     if (!success && fallbackKey) {
       console.log("Trying fallback key...")
-      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${'gemini-3.8-flash'}:generateContent?key=${fallbackKey}`
+      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${fallbackKey}`
       const res = await fetch(fallbackUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
