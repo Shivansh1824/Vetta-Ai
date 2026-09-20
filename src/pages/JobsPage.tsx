@@ -1,5 +1,4 @@
-import React from 'react'
-import { TopHeader } from '../layout/TopHeader'
+import { TopHeader } from '../components/layout/TopHeader'
 import { Briefcase, Plus, ChevronRight, Clock, Users } from 'lucide-react'
 
 const MOCK_JOBS = [

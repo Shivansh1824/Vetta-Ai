@@ -1,11 +1,13 @@
-import React from 'react'
-import { Sidebar, NavItem } from './components/layout/Sidebar'
+import { Sidebar } from './components/layout/Sidebar'
+import type { NavItem } from './components/layout/Sidebar'
 import { DashboardPage } from './pages/DashboardPage'
 import { JobsPage } from './pages/JobsPage'
 import { ScreeningPage } from './pages/ScreeningPage'
 import { InterviewPage } from './pages/InterviewPage'
 import { TopHeader } from './components/layout/TopHeader'
 import { useState } from 'react'
+
+import { OnboardingFlow } from './components/onboarding/OnboardingFlow'
 
 // Lightweight placeholder for pages not yet built
 function PlaceholderPage({ title, subtitle }: { title: string; subtitle: string }) {
@@ -33,6 +35,7 @@ function PlaceholderPage({ title, subtitle }: { title: string; subtitle: string 
 }
 
 const PAGE_SUBTITLES: Record<NavItem, { title: string; subtitle: string }> = {
+  onboarding: { title: 'Onboarding Intake', subtitle: 'Step-by-step role and candidate screening flow.' },
   dashboard: { title: 'Dashboard', subtitle: 'Your hiring pipeline at a glance.' },
   jobs: { title: 'Job Posts', subtitle: 'Manage your open positions.' },
   candidates: { title: 'Candidates', subtitle: 'All candidates across active roles.' },
@@ -43,10 +46,20 @@ const PAGE_SUBTITLES: Record<NavItem, { title: string; subtitle: string }> = {
 }
 
 export function AppShell() {
-  const [activePage, setActivePage] = useState<NavItem>('dashboard')
+  const [activePage, setActivePage] = useState<NavItem>('onboarding')
 
   const renderPage = () => {
     switch (activePage) {
+      case 'onboarding':
+        return (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+            <TopHeader title="Candidate Intake & Onboarding" subtitle="Configure target position, upload resumes or test with pre-built sample candidate data." />
+            <OnboardingFlow
+              onNavigateToInterview={() => setActivePage('interview')}
+              onNavigateToDashboard={() => setActivePage('dashboard')}
+            />
+          </div>
+        )
       case 'dashboard': return <DashboardPage />
       case 'jobs': return <JobsPage />
       case 'screening': return <ScreeningPage />

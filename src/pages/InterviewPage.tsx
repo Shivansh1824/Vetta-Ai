@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
-import { TopHeader } from '../layout/TopHeader'
-import { MessageSquare, Brain, Loader2, CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react'
-import { generateInterviewQuestions } from '../../services/gemini'
-import type { Job, GeminiInterviewResult } from '../../types'
+import { useState } from 'react'
+import { TopHeader } from '../components/layout/TopHeader'
+import { Brain, Loader2, CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react'
+import { generateInterviewQuestions } from '../services/gemini'
+import type { Job, GeminiInterviewResult, QuestionDifficulty } from '../types'
 
 const MOCK_JOB: Job = {
   id: 'demo-job-1', recruiter_id: null,
@@ -14,7 +14,7 @@ const MOCK_JOB: Job = {
   status: 'active', created_at: new Date().toISOString(),
 }
 
-const DIFFICULTY_STYLE = {
+const DIFFICULTY_STYLE: Record<QuestionDifficulty, { color: string; bg: string }> = {
   foundational: { color: 'var(--color-emerald)', bg: 'var(--color-emerald-subtle)' },
   intermediate: { color: 'var(--color-amber)', bg: 'var(--color-amber-subtle)' },
   advanced: { color: 'var(--color-accent)', bg: 'var(--color-accent-subtle)' },

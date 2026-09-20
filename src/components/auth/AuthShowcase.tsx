@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
-import { Brain, CheckCircle2, AlertTriangle, Sparkles, ChevronRight } from 'lucide-react'
+import { Brain, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react'
 
 const CANDIDATES = [
   { name: 'Arjun Mehta', role: 'Senior Full-Stack Engineer', score: 94, tier: 'tier_1_match' as const },

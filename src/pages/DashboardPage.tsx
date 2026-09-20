@@ -1,10 +1,10 @@
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
 import {
   Users, Briefcase, ShieldCheck, TrendingUp,
-  Clock, ArrowRight, CheckCircle2, AlertTriangle, Minus
+  ArrowRight, CheckCircle2, AlertTriangle, Minus
 } from 'lucide-react'
-import { TopHeader } from '../layout/TopHeader'
+import { TopHeader } from '../components/layout/TopHeader'
 
 const STATS = [
   { label: 'Active Jobs', value: '3', icon: <Briefcase size={18} />, color: 'var(--color-accent)', bg: 'var(--color-accent-subtle)' },

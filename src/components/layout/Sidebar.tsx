@@ -1,12 +1,13 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
   LayoutDashboard, Briefcase, Users, ShieldCheck,
   MessageSquare, FileText, Settings, LogOut,
-  ChevronLeft, ChevronRight, Menu, X,
+  ChevronLeft, ChevronRight, Menu, X, Sparkles,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 export type NavItem =
+  | 'onboarding'
   | 'dashboard'
   | 'jobs'
   | 'candidates'
@@ -16,6 +17,7 @@ export type NavItem =
   | 'settings'
 
 const NAV_ITEMS: { id: NavItem; label: string; icon: React.ReactNode; badge?: string }[] = [
+  { id: 'onboarding', label: 'Onboarding Intake', icon: <Sparkles size={17} />, badge: 'Flow' },
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={17} /> },
   { id: 'jobs', label: 'Job Posts', icon: <Briefcase size={17} /> },
   { id: 'candidates', label: 'Candidates', icon: <Users size={17} /> },
