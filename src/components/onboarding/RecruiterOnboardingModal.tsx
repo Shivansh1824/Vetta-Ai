@@ -6,6 +6,7 @@ import { JobRoleSetupStep, type JobRoleData } from './steps/JobRoleSetupStep'
 import { CandidateUploadStep, type CandidateIntakeData } from './steps/CandidateUploadStep'
 import { ScreeningResultsStep } from './steps/ScreeningResultsStep'
 import { analyzeResume, buildOfflineScreeningResult } from '../../services/gemini'
+import { saveCandidateToDatabase } from '../../services/candidateStorage'
 import type { Job, GeminiScreeningResult } from '../../types'
 
 interface Props {
@@ -95,6 +96,20 @@ export function RecruiterOnboardingModal({ isOpen, onClose, onComplete, onGoToIn
     try {
       const res = await analyzeResume(candidateData.resumeText, jobPayload)
       setScreeningResult(res)
+      if (candidateData.id) {
+        saveCandidateToDatabase({
+          id: candidateData.id,
+          name: candidateData.candidateName,
+          email: candidateData.candidateEmail,
+          phone: candidateData.candidatePhone,
+          currentTitle: candidateData.currentTitle,
+          totalYearsExp: candidateData.totalYearsExp,
+          matchScore: res.match_score,
+          tier: res.tier,
+          summary: res.summary,
+          resumeText: candidateData.resumeText,
+        })
+      }
     } catch {
       const fallback = buildOfflineScreeningResult(candidateData.resumeText, jobPayload)
       setScreeningResult(fallback)

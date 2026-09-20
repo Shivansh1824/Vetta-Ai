@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { gsap } from 'gsap'
 import {
-  FileText, ArrowLeft, ArrowRight, Sparkles,
+  FileText, ArrowLeft, ArrowRight,
   FileUp, Image as ImageIcon, FileCode, CheckCircle2,
-  Trash2, RefreshCw, Brain, AlertCircle, Loader2
+  Trash2, RefreshCw, Brain, AlertCircle
 } from 'lucide-react'
-import { SAMPLE_CANDIDATES } from '../../../data/sampleCandidates'
 import type { SampleCandidate } from '../../../data/sampleCandidates'
 import { extractAndValidateResume, buildOfflineExtractionResult } from '../../../services/gemini'
 import { saveCandidateToDatabase } from '../../../services/candidateStorage'
@@ -72,20 +71,20 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
       is_resume: true,
       candidate_name: sample.name,
       email: `${sample.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
-      current_title: sample.currentRole,
-      total_years_exp: sample.experienceYears,
-      skills: sample.keySkills,
-      summary: sample.summary,
+      current_title: sample.role,
+      total_years_exp: 7,
+      skills: ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Distributed Systems'],
+      summary: sample.tagline,
       formatted_resume_text: sample.resumeText,
     }
     onChange({
       id: sample.id,
       candidateName: sample.name,
       candidateEmail: `${sample.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
-      currentTitle: sample.currentRole,
-      totalYearsExp: sample.experienceYears,
-      skills: sample.keySkills,
-      summary: sample.summary,
+      currentTitle: sample.role,
+      totalYearsExp: 7,
+      skills: ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Distributed Systems'],
+      summary: sample.tagline,
       resumeText: sample.resumeText,
       isSampleData: true,
       sampleId: sample.id,
@@ -361,47 +360,27 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
       <div
         onClick={() => fileInputRef.current?.click()}
         style={{
-          border: '2px dashed var(--color-border)',
-          borderRadius: 'var(--radius-lg, 12px)',
-          padding: '28px 20px',
-          textAlign: 'center',
+          border: '2px dashed var(--color-border)', borderRadius: 'var(--radius-lg, 12px)',
+          padding: '24px 20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
           background: processingStage === 'success' ? 'hsla(158,64%,52%,0.05)' : 'var(--color-surface)',
           borderColor: processingStage === 'success' ? 'var(--color-emerald)' : 'var(--color-border)',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
         }}
       >
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700,
-            background: 'hsla(350,89%,60%,0.1)', color: 'hsl(350,89%,55%)',
-          }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, background: 'hsla(350,89%,60%,0.1)', color: 'hsl(350,89%,55%)' }}>
             <FileText size={12} /> PDF Document
           </span>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700,
-            background: 'hsla(217,91%,60%,0.1)', color: 'hsl(217,91%,55%)',
-          }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, background: 'hsla(217,91%,60%,0.1)', color: 'hsl(217,91%,55%)' }}>
             <ImageIcon size={12} /> PNG / JPG (OCR)
           </span>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700,
-            background: 'hsla(158,64%,52%,0.1)', color: 'hsl(158,64%,42%)',
-          }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, background: 'hsla(158,64%,52%,0.1)', color: 'hsl(158,64%,42%)' }}>
             <FileCode size={12} /> Batch Documents
           </span>
         </div>
 
-        <div style={{
-          width: 44, height: 44, borderRadius: '50%',
-          background: 'var(--color-accent-subtle)', color: 'var(--color-accent)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <FileUp size={22} />
+        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--color-accent-subtle)', color: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <FileUp size={20} />
         </div>
 
         <div>
@@ -409,48 +388,36 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
             {data.uploadedFileName ? `Active Document: ${data.uploadedFileName}` : 'Click to Upload Resume Document(s) or Folder'}
           </div>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-            Gemini Flash automatically detects file authenticity, runs OCR, and extracts editable profile text.
+            Gemini Flash automatically authenticates file, executes OCR, and extracts structured A+ JSON data.
           </span>
         </div>
       </div>
 
       {/* Progress Bar during Upload */}
       {processingStage === 'uploading' && (
-        <div style={{ background: 'var(--color-surface-elevated)', borderRadius: 'var(--radius-md)', padding: 14, border: '1px solid var(--color-border)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 'var(--text-xs)', fontWeight: 700 }}>
+        <div style={{ background: 'var(--color-surface-elevated)', borderRadius: 'var(--radius-md)', padding: 12, border: '1px solid var(--color-border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 'var(--text-xs)', fontWeight: 700 }}>
             <span>Uploading document…</span>
             <span>{uploadPercent}%</span>
           </div>
           <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden' }}>
-            <div
-              ref={progressBarRef}
-              style={{ height: '100%', background: 'var(--color-accent)', width: '0%', transition: 'width 0.2s' }}
-            />
+            <div ref={progressBarRef} style={{ height: '100%', background: 'var(--color-accent)', width: '0%' }} />
           </div>
         </div>
       )}
 
       {/* Extracting Animation Card */}
       {processingStage === 'extracting' && (
-        <div style={{
-          padding: '16px 20px', borderRadius: 'var(--radius-md)',
-          background: 'var(--color-accent-subtle)', border: '1px solid var(--color-accent)',
-          display: 'flex', alignItems: 'center', gap: 14,
-        }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: '50%',
-            background: 'var(--color-accent)', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, animation: 'pulse 1.5s infinite',
-          }}>
-            <Brain size={20} />
+        <div style={{ padding: '14px 18px', borderRadius: 'var(--radius-md)', background: 'var(--color-accent-subtle)', border: '1px solid var(--color-accent)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--color-accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, animation: 'pulse 1.5s infinite' }}>
+            <Brain size={18} />
           </div>
           <div>
             <div style={{ fontWeight: 800, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)' }}>
               Google Gemini Flash: OCR Extraction & Document Verification…
             </div>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>
-              Authenticating resume layout, reading multi-column structures, and extracting candidate data in pure JSON format.
+              Authenticating layout, reading multi-column structures, and extracting candidate data in pure JSON format.
             </span>
           </div>
         </div>

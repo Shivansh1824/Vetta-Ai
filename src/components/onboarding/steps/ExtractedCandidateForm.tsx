@@ -1,4 +1,4 @@
-import { RefreshCw, Database, CheckCircle2, Tag } from 'lucide-react'
+import { RefreshCw, Database, Tag } from 'lucide-react'
 import type { CandidateIntakeData } from './CandidateUploadStep'
 
 interface Props {
