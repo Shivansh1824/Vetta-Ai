@@ -125,3 +125,9 @@ export interface ResumeExtractionResult {
   skills?: string[]
   formatted_resume_text?: string
 }
+
+export interface JobCriteriaValidationResult {
+  is_valid: boolean
+  out_of_context_items: string[]
+  explanation: string
+}

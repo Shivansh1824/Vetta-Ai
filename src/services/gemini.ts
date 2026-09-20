@@ -6,7 +6,7 @@
  * Both target gemini-3.8-flash with medium thinking; gemini-3.6-flash as fallback.
  */
 
-import type { GeminiScreeningResult, GeminiInterviewResult, Job, Tier, ResumeExtractionResult } from '../types'
+import type { GeminiScreeningResult, GeminiInterviewResult, Job, Tier, ResumeExtractionResult, JobCriteriaValidationResult } from '../types'
 
 const MODEL_PRIMARY = 'gemini-2.0-flash-thinking-exp'   // closest available to "3.8 flash thinking"
 const MODEL_FALLBACK = 'gemini-2.0-flash'
@@ -214,5 +214,68 @@ export function buildOfflineScreeningResult(resumeText: string, job: Job): Gemin
       evidence_quote: '',
     })),
     flags: [],
+  }
+}
+
+// ─── Function: Validate Hiring Role Criteria (API Key 1) ───────────────────
+
+export async function validateJobRoleCriteria(input: {
+  title: string
+  department?: string
+  mustHaves: string[]
+  niceToHaves: string[]
+  descriptionText?: string
+}): Promise<JobCriteriaValidationResult> {
+  const allCriteria = [...input.mustHaves, ...input.niceToHaves]
+  const prompt = `You are an expert HR and recruitment intelligence auditor for Vetta AI.
+Analyze the hiring role details and evaluation criteria configured by a recruiter.
+
+JOB TITLE: ${input.title}
+DEPARTMENT: ${input.department || 'N/A'}
+MUST-HAVE SKILLS: ${input.mustHaves.join(', ')}
+NICE-TO-HAVE SKILLS: ${input.niceToHaves.join(', ')}
+ROLE DESCRIPTION: ${input.descriptionText || 'N/A'}
+
+TASK:
+Check if ANY of the skills or criteria are completely out of context, inappropriate, offensive, nonsense, insults, slurs, or irrelevant to a professional hiring role (e.g. insults like "idiot", "pagal", "fool", or joke terms like "banana", "cooking" for software dev, or typing spam "asdfasdf").
+
+CRITICAL RULES:
+1. Valid technical, operational, design, domain, framework, tool, library, database, protocol, or professional soft skills (e.g., React, TypeScript, Node.js, Distributed Systems, PostgreSQL, SAP, Kafka, Redis, Kubernetes, Docker, GIT, AWS, CI/CD) ARE LEGITIMATE AND VALID.
+2. Any offensive words, insults (e.g., "Pagal", "Idiot", "Stupid"), slurs, joke terms, or completely out-of-context nonsensical words MUST be flagged in "out_of_context_items".
+3. If any out-of-context items are detected, set "is_valid": false, list the exact offending items in "out_of_context_items", and provide a clear, polite explanation in "explanation" asking the recruiter to remove them to move further.
+4. If all items are legitimate professional job skills or requirements, set "is_valid": true, "out_of_context_items": [], and "explanation": "".
+
+Return ONLY valid JSON (no markdown formatting fences, no extra text):
+{
+  "is_valid": <true or false>,
+  "out_of_context_items": ["<item1>", "<item2>"],
+  "explanation": "<explanation of what is out of context and request to remove them>"
+}`
+
+  try {
+    const raw = await callGemini(API_KEY_1, prompt)
+    return parseJSON<JobCriteriaValidationResult>(raw)
+  } catch {
+    // Offline heuristic fallback for network or API issues
+    const flagged: string[] = []
+    const suspiciousKeywords = ['pagal', 'idiot', 'fool', 'stupid', 'dumb', 'nonsense', 'bakwas', 'rubbish', 'junk', 'asdf']
+    for (const item of allCriteria) {
+      const lower = item.toLowerCase().trim()
+      if (suspiciousKeywords.some(bad => lower.includes(bad))) {
+        flagged.push(item)
+      }
+    }
+    if (flagged.length > 0) {
+      return {
+        is_valid: false,
+        out_of_context_items: flagged,
+        explanation: `The following criteria appear out of context or invalid for this role: ${flagged.join(', ')}. Please remove them to move further.`,
+      }
+    }
+    return {
+      is_valid: true,
+      out_of_context_items: [],
+      explanation: '',
+    }
   }
 }
