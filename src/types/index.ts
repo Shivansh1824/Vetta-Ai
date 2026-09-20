@@ -113,3 +113,15 @@ export interface GeminiScreeningResult {
 export interface GeminiInterviewResult {
   questions: { question_text: string; target_criterion: string; difficulty: QuestionDifficulty }[]
 }
+
+export interface ResumeExtractionResult {
+  is_resume: boolean
+  rejection_reason?: string
+  candidate_name?: string
+  email?: string
+  phone?: string
+  current_title?: string
+  total_years_exp?: number
+  skills?: string[]
+  formatted_resume_text?: string
+}
