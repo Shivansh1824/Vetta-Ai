@@ -9,11 +9,9 @@
 import type { GeminiScreeningResult, GeminiInterviewResult, Job, Tier, ResumeExtractionResult, JobCriteriaValidationResult } from '../types'
 
 const AVAILABLE_MODELS = [
-  'gemini-3.5-flash',
-  'gemini-3.6-flash',
   'gemini-3.8-flash',
-  'gemini-3.1-flash-lite',
-  'gemini-flash-latest',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
 ]
 
 const API_KEY_1 = (import.meta.env.VITE_GEMINI_API_KEY_1 as string) || ''
@@ -31,7 +29,7 @@ async function callGemini(
   const model = AVAILABLE_MODELS[modelIndex] || AVAILABLE_MODELS[0]
   const activeKey = apiKey || fallbackKey || API_KEY_2 || API_KEY_1
   const url = `${BASE_URL}/${model}:generateContent?key=${activeKey}`
-  const parts: Array<{ text?: string; inline_data?: { mime_type: string; data: string } }> = [{ text: prompt }]
+  const parts: Array<{ text?: string; inline_data?: { mime_type: string; data: string } }> = []
 
   if (inlineData) {
     parts.push({
@@ -41,6 +39,8 @@ async function callGemini(
       },
     })
   }
+
+  parts.push({ text: prompt })
 
   try {
     const res = await fetch(url, {
@@ -145,6 +145,31 @@ Return ONLY valid JSON matching this schema:
 
   const raw = await callGemini(API_KEY_2, contentPrompt, 0, inline, API_KEY_1)
   const parsed = parseJSON<ResumeExtractionResult>(raw)
+
+  // Reconstruct formatted_resume_text if model returned it empty or null
+  if (!parsed.formatted_resume_text || parsed.formatted_resume_text.trim().length < 20) {
+    const textSections: string[] = []
+    if (parsed.candidate_name) textSections.push(parsed.candidate_name.toUpperCase())
+    if (parsed.current_title) textSections.push(`Title: ${parsed.current_title}`)
+    if (parsed.email || parsed.phone) textSections.push([parsed.email, parsed.phone].filter(Boolean).join(' | '))
+    if (parsed.summary) textSections.push(`\nSUMMARY:\n${parsed.summary}`)
+    if (parsed.skills && parsed.skills.length > 0) textSections.push(`\nTECHNICAL SKILLS:\n${parsed.skills.join(', ')}`)
+    if (parsed.experience && parsed.experience.length > 0) {
+      textSections.push('\nEXPERIENCE:')
+      parsed.experience.forEach(exp => {
+        textSections.push(`${exp.role} — ${exp.company} (${exp.duration})`)
+        if (exp.highlights) exp.highlights.forEach(h => textSections.push(`• ${h}`))
+      })
+    }
+    if (parsed.education && parsed.education.length > 0) {
+      textSections.push('\nEDUCATION:')
+      parsed.education.forEach(edu => {
+        textSections.push(`${edu.degree} — ${edu.institution} (${edu.year})`)
+      })
+    }
+    parsed.formatted_resume_text = textSections.join('\n')
+  }
+
   return {
     ...parsed,
     raw_json: parsed as unknown as Record<string, any>,
