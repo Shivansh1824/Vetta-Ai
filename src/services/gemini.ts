@@ -16,8 +16,8 @@ const AVAILABLE_MODELS = [
   'gemini-flash-latest',
 ]
 
-const API_KEY_1 = import.meta.env.VITE_GEMINI_API_KEY_1 as string
-const API_KEY_2 = import.meta.env.VITE_GEMINI_API_KEY_2 as string
+const API_KEY_1 = (import.meta.env.VITE_GEMINI_API_KEY_1 as string) || ''
+const API_KEY_2 = (import.meta.env.VITE_GEMINI_API_KEY_2 as string) || ''
 
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
