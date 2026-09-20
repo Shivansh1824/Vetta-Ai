@@ -5,7 +5,6 @@
 
 - **Stack**: React 18 + Vite, TypeScript, Tailwind CSS v4, GSAP 3 animations, Supabase Database & Auth, Google Gemini API (Fn 1: Candidate Screening & Requirement Mapping, Fn 2: Adaptive Interview Cockpit).
 - **Core Design System**: Modern slate surfaces, indigo-blue brand accents (`hsl(231,76%,52%)`), Plus Jakarta Sans typography, and GSAP micro-animations.
-- **Tracker Hub**: Open `tracker.html` or navigate to `http://localhost:5177/tracker.html`.
 
 ---
 

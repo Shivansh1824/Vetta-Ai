@@ -1,9 +1,7 @@
 # Vetta AI — AI Candidate Screening & Interview Intelligence Agent
 
 [![Live Deployment](https://img.shields.io/badge/Live_Demo-Vercel-6366f1?style=for-the-badge&logo=vercel)](https://vettaai-seven.vercel.app)
-[![Protocol Status](https://img.shields.io/badge/7--Stage_Protocol-100%25_Complete-10b981?style=for-the-badge)](https://vettaai-seven.vercel.app/tracker.html)
-[![Database](https://img.shields.io/badge/Supabase-Live_Ledger-3ecf8e?style=for-the-badge&logo=supabase)](https://supabase.com)
-[![AI Engine](https://img.shields.io/badge/Google_Gemini-Flash_Multi--Model-4285f4?style=for-the-badge&logo=google)](https://ai.google.dev)
+
 
 > **HireFlow Track:** AI Candidate Screening & Interview Intelligence Agent  
 > **Core Philosophy:** Accelerate technical recruiting while eliminating ungrounded AI hallucinations through **verbatim resume citation grounding**, **constructive candidate synthesis**, and **real-time adaptive interview intelligence**.
@@ -51,7 +49,7 @@
 ┌───────────────────────────────────────────────────────────────────────────────────┐
 │                               OUTPUT DELIVERABLES                                 │
 │  • 1-Click Standardized Evaluation Scorecard Memo (Strong Hire / Lean Hire)       │
-│  • Interactive Visual Pipeline Tracker (`tracker.html`)                           │
+│  • Multi-Tier Candidate Clustering & Recommendation Memos                         │
 │  • Central Recruiter Pipeline Dashboard                                           │
 +───────────────────────────────────────────────────────────────────────────────────+
 ```
@@ -99,8 +97,6 @@ npm run dev
 npm run build
 ```
 
-### Pre-configured Evaluator Access
-- **URL:** [vettaai-seven.vercel.app](https://vettaai-seven.vercel.app)
-- **Work Email:** `demo.recruiter@vetta.ai`
-- **Password:** `VettaDemo2026!` (or 1-click **Auto-Fill**)
-- **Visual Tracker:** [vettaai-seven.vercel.app/tracker.html](https://vettaai-seven.vercel.app/tracker.html)
+### Live Deployment
+- **URL:** [https://vettaai-seven.vercel.app](https://vettaai-seven.vercel.app)
+
