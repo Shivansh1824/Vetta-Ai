@@ -25,7 +25,24 @@ export interface StoredResume {
   storageUrl?: string
 }
 
-const INITIAL_RESUMES: StoredResume[] = []
+import { SAMPLE_CANDIDATES } from '../data/sampleCandidates'
+
+const INITIAL_RESUMES: StoredResume[] = SAMPLE_CANDIDATES.map((cand, idx) => ({
+  id: `res-${idx + 1}`,
+  candidateName: cand.name,
+  targetRole: cand.role,
+  fileName: `${cand.name.replace(/\s+/g, '_')}_Resume.pdf`,
+  fileSize: `${120 + idx * 18} KB`,
+  uploadedAt: idx === 0 ? 'Today at 00:15' : idx === 1 ? 'Yesterday at 18:40' : 'Sep 19, 2026',
+  matchScore: cand.expectedScore,
+  tier: cand.tier,
+  skills: cand.role.includes('Frontend')
+    ? ['React', 'TypeScript', 'Tailwind CSS', 'Redux', 'Jest']
+    : cand.role.includes('Junior')
+    ? ['JavaScript', 'HTML/CSS', 'React', 'Git']
+    : ['React 18', 'TypeScript', 'Node.js', 'PostgreSQL', 'Distributed Systems', 'Kafka'],
+  resumeText: cand.resumeText,
+}))
 
 const TIER_COLORS: Record<string, { bg: string; color: string; label: string }> = {
   tier_1_match: { bg: 'var(--color-emerald-subtle)', color: 'var(--color-emerald)', label: 'Top Match (80%+)' },
