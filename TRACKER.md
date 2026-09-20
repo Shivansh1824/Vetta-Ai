@@ -60,8 +60,9 @@
 - [x] Project Context & AI Rules setup (`ai-context.md`)
 - [x] Architecture Specification (`README.md`)
 - [x] Security Configuration: Environment credentials locked in `.env.local` & protected via `.gitignore`
-- [x] Master Project Tracker & Integration Guide created (`TRACKER.md`)
+- [x] Master Project Tracker & Integration Guide created (`TRACKER.md` & `tracker.html`)
 - [x] Supabase SQL Schema defined & prepared (`supabase/schema.sql`)
+- [x] **Supabase CLI Linked & Deployed**: All 8 tables, indexes, and RLS policies pushed live to `tuguxuxhdmnxkpzjwjga`!
 
 ### Phase 2: Frontend Scaffolding & Setup *(Next Chat)*
 - [ ] Initialize Vite + React (TypeScript) + Tailwind CSS + Lucide Icons
