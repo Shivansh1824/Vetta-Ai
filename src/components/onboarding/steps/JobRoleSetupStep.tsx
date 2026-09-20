@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Briefcase, ArrowLeft, ArrowRight, Plus, X, Tag } from 'lucide-react'
+import { Briefcase, ArrowLeft, ArrowRight, Plus, X, Tag, AlertCircle, Loader2, Trash2 } from 'lucide-react'
+import { validateJobRoleCriteria } from '../../../services/gemini'
 
 export interface JobRoleData {
   title: string
@@ -20,6 +21,13 @@ interface Props {
 export function JobRoleSetupStep({ data, onChange, onPrev, onNext }: Props) {
   const [newMustHave, setNewMustHave] = useState('')
   const [newNiceToHave, setNewNiceToHave] = useState('')
+  const [isValidating, setIsValidating] = useState(false)
+  const [validationError, setValidationError] = useState<{ outOfContextItems: string[]; explanation: string } | null>(null)
+
+  const isFlagged = (tag: string) =>
+    Boolean(validationError?.outOfContextItems?.some(
+      item => item.toLowerCase().trim() === tag.toLowerCase().trim()
+    ))
 
   const handleAddMustHave = () => {
     if (!newMustHave.trim()) return
@@ -27,10 +35,23 @@ export function JobRoleSetupStep({ data, onChange, onPrev, onNext }: Props) {
       onChange({ mustHaves: [...data.mustHaves, newMustHave.trim()] })
     }
     setNewMustHave('')
+    if (validationError) setValidationError(null)
   }
 
   const handleRemoveMustHave = (tag: string) => {
-    onChange({ mustHaves: data.mustHaves.filter(t => t !== tag) })
+    const nextMustHaves = data.mustHaves.filter(t => t !== tag)
+    onChange({ mustHaves: nextMustHaves })
+    if (validationError) {
+      const remainingFlagged = validationError.outOfContextItems.filter(
+        i => nextMustHaves.some(m => m.toLowerCase().trim() === i.toLowerCase().trim()) ||
+             data.niceToHaves.some(n => n.toLowerCase().trim() === i.toLowerCase().trim())
+      )
+      if (remainingFlagged.length === 0) {
+        setValidationError(null)
+      } else {
+        setValidationError({ ...validationError, outOfContextItems: remainingFlagged })
+      }
+    }
   }
 
   const handleAddNiceToHave = () => {
@@ -39,10 +60,65 @@ export function JobRoleSetupStep({ data, onChange, onPrev, onNext }: Props) {
       onChange({ niceToHaves: [...data.niceToHaves, newNiceToHave.trim()] })
     }
     setNewNiceToHave('')
+    if (validationError) setValidationError(null)
   }
 
   const handleRemoveNiceToHave = (tag: string) => {
-    onChange({ niceToHaves: data.niceToHaves.filter(t => t !== tag) })
+    const nextNiceToHaves = data.niceToHaves.filter(t => t !== tag)
+    onChange({ niceToHaves: nextNiceToHaves })
+    if (validationError) {
+      const remainingFlagged = validationError.outOfContextItems.filter(
+        i => data.mustHaves.some(m => m.toLowerCase().trim() === i.toLowerCase().trim()) ||
+             nextNiceToHaves.some(n => n.toLowerCase().trim() === i.toLowerCase().trim())
+      )
+      if (remainingFlagged.length === 0) {
+        setValidationError(null)
+      } else {
+        setValidationError({ ...validationError, outOfContextItems: remainingFlagged })
+      }
+    }
+  }
+
+  const handleRemoveAllOutOfContext = () => {
+    if (!validationError) return
+    const flaggedLower = validationError.outOfContextItems.map(i => i.toLowerCase().trim())
+    onChange({
+      mustHaves: data.mustHaves.filter(t => !flaggedLower.includes(t.toLowerCase().trim())),
+      niceToHaves: data.niceToHaves.filter(t => !flaggedLower.includes(t.toLowerCase().trim())),
+    })
+    setValidationError(null)
+  }
+
+  const handleProceed = async () => {
+    if (!canProceed || isValidating) return
+    setIsValidating(true)
+    setValidationError(null)
+
+    try {
+      const result = await validateJobRoleCriteria({
+        title: data.title,
+        department: data.department,
+        mustHaves: data.mustHaves,
+        niceToHaves: data.niceToHaves,
+        descriptionText: data.descriptionText,
+      })
+
+      if (!result.is_valid && result.out_of_context_items && result.out_of_context_items.length > 0) {
+        setValidationError({
+          outOfContextItems: result.out_of_context_items,
+          explanation: result.explanation || 'Some criteria appear to be out of context for a professional role. Please remove them to move further.',
+        })
+        setIsValidating(false)
+        return
+      }
+
+      onNext()
+    } catch (err) {
+      console.error('Validation check error:', err)
+      onNext()
+    } finally {
+      setIsValidating(false)
+    }
   }
 
   const canProceed = data.title.trim().length > 0 && data.mustHaves.length > 0
@@ -146,27 +222,46 @@ export function JobRoleSetupStep({ data, onChange, onPrev, onNext }: Props) {
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {data.mustHaves.map((tag) => (
-            <span
-              key={tag}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '5px 10px', borderRadius: 'var(--radius-md)',
-                background: 'var(--color-accent-subtle)', color: 'var(--color-accent)',
-                fontSize: 'var(--text-xs)', fontWeight: 700,
-              }}
-            >
-              <Tag size={11} />
-              {tag}
-              <button
-                type="button"
-                onClick={() => handleRemoveMustHave(tag)}
-                style={{ background: 'none', border: 'none', color: 'var(--color-accent)', cursor: 'pointer', padding: 0, display: 'flex' }}
+          {data.mustHaves.map((tag) => {
+            const flagged = isFlagged(tag)
+            return (
+              <span
+                key={tag}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '5px 10px', borderRadius: 'var(--radius-md)',
+                  background: flagged ? 'hsla(0, 84%, 60%, 0.12)' : 'var(--color-accent-subtle)',
+                  border: flagged ? '1.5px solid hsl(0, 72%, 51%)' : '1px solid transparent',
+                  color: flagged ? 'hsl(0, 72%, 45%)' : 'var(--color-accent)',
+                  fontSize: 'var(--text-xs)', fontWeight: 700,
+                  transition: 'all 0.2s ease',
+                }}
               >
-                <X size={12} />
-              </button>
-            </span>
-          ))}
+                {flagged ? <AlertCircle size={12} style={{ color: 'hsl(0, 72%, 51%)' }} /> : <Tag size={11} />}
+                {tag}
+                {flagged && (
+                  <span style={{
+                    fontSize: 9, textTransform: 'uppercase', background: 'hsl(0, 72%, 51%)',
+                    color: '#fff', padding: '1px 4px', borderRadius: 3, fontWeight: 800,
+                  }}>
+                    Out of Context
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveMustHave(tag)}
+                  title="Remove requirement"
+                  style={{
+                    background: 'none', border: 'none',
+                    color: flagged ? 'hsl(0, 72%, 51%)' : 'var(--color-accent)',
+                    cursor: 'pointer', padding: 0, display: 'flex',
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )
+          })}
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
@@ -209,26 +304,46 @@ export function JobRoleSetupStep({ data, onChange, onPrev, onNext }: Props) {
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {data.niceToHaves.map((tag) => (
-            <span
-              key={tag}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '5px 10px', borderRadius: 'var(--radius-md)',
-                background: 'var(--color-surface)', color: 'var(--color-text-secondary)',
-                border: '1px solid var(--color-border)', fontSize: 'var(--text-xs)', fontWeight: 600,
-              }}
-            >
-              {tag}
-              <button
-                type="button"
-                onClick={() => handleRemoveNiceToHave(tag)}
-                style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}
+          {data.niceToHaves.map((tag) => {
+            const flagged = isFlagged(tag)
+            return (
+              <span
+                key={tag}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '5px 10px', borderRadius: 'var(--radius-md)',
+                  background: flagged ? 'hsla(0, 84%, 60%, 0.12)' : 'var(--color-surface)',
+                  border: flagged ? '1.5px solid hsl(0, 72%, 51%)' : '1px solid var(--color-border)',
+                  color: flagged ? 'hsl(0, 72%, 45%)' : 'var(--color-text-secondary)',
+                  fontSize: 'var(--text-xs)', fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                }}
               >
-                <X size={12} />
-              </button>
-            </span>
-          ))}
+                {flagged && <AlertCircle size={12} style={{ color: 'hsl(0, 72%, 51%)' }} />}
+                {tag}
+                {flagged && (
+                  <span style={{
+                    fontSize: 9, textTransform: 'uppercase', background: 'hsl(0, 72%, 51%)',
+                    color: '#fff', padding: '1px 4px', borderRadius: 3, fontWeight: 800,
+                  }}>
+                    Out of Context
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveNiceToHave(tag)}
+                  title="Remove requirement"
+                  style={{
+                    background: 'none', border: 'none',
+                    color: flagged ? 'hsl(0, 72%, 51%)' : 'var(--color-text-muted)',
+                    cursor: 'pointer', padding: 0, display: 'flex',
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )
+          })}
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
@@ -277,6 +392,63 @@ export function JobRoleSetupStep({ data, onChange, onPrev, onNext }: Props) {
         />
       </div>
 
+      {/* Out of context validation banner */}
+      {validationError && (
+        <div style={{
+          background: 'hsla(0, 84%, 60%, 0.08)',
+          border: '1px solid hsla(0, 72%, 51%, 0.4)',
+          borderRadius: 'var(--radius-md)',
+          padding: '14px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <AlertCircle size={20} style={{ color: 'hsl(0, 72%, 51%)', flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'hsl(0, 72%, 45%)', marginBottom: 2 }}>
+                  Out-of-Context Hiring Criteria Detected
+                </div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+                  {validationError.explanation}
+                </div>
+                <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'hsl(0, 72%, 45%)' }}>Please remove:</span>
+                  {validationError.outOfContextItems.map((item) => (
+                    <span
+                      key={item}
+                      style={{
+                        fontSize: 11, fontWeight: 800, color: 'hsl(0, 72%, 45%)',
+                        background: 'hsla(0, 84%, 60%, 0.15)', padding: '2px 8px',
+                        borderRadius: 4, textDecoration: 'line-through',
+                      }}
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleRemoveAllOutOfContext}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '7px 12px', borderRadius: 'var(--radius-md)',
+                background: 'hsl(0, 72%, 51%)', color: '#fff',
+                border: 'none', fontSize: 'var(--text-xs)', fontWeight: 700,
+                cursor: 'pointer', flexShrink: 0,
+              }}
+            >
+              <Trash2 size={13} />
+              Remove Out-of-Context Items
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Action Footer */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
         <button
@@ -295,18 +467,29 @@ export function JobRoleSetupStep({ data, onChange, onPrev, onNext }: Props) {
 
         <button
           type="button"
-          onClick={onNext}
-          disabled={!canProceed}
+          onClick={handleProceed}
+          disabled={!canProceed || isValidating}
           style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '11px 24px', borderRadius: 'var(--radius-md)',
-            background: canProceed ? 'linear-gradient(135deg, hsl(231,76%,52%), hsl(231,76%,46%))' : 'var(--color-border)',
+            background: canProceed && !isValidating
+              ? 'linear-gradient(135deg, hsl(231,76%,52%), hsl(231,76%,46%))'
+              : 'var(--color-border)',
             color: '#fff', border: 'none', fontWeight: 800, fontSize: 'var(--text-sm)',
-            cursor: canProceed ? 'pointer' : 'not-allowed',
-            boxShadow: canProceed ? '0 2px 10px hsla(231,76%,52%,0.25)' : 'none',
+            cursor: canProceed && !isValidating ? 'pointer' : 'not-allowed',
+            boxShadow: canProceed && !isValidating ? '0 2px 10px hsla(231,76%,52%,0.25)' : 'none',
           }}
         >
-          Next: Candidate Intake & Ingestion <ArrowRight size={16} />
+          {isValidating ? (
+            <>
+              <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              Verifying Criteria with AI…
+            </>
+          ) : (
+            <>
+              Next: Candidate Intake & Ingestion <ArrowRight size={16} />
+            </>
+          )}
         </button>
       </div>
     </div>
