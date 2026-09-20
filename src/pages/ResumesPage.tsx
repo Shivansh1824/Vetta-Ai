@@ -6,7 +6,8 @@ import {
   ShieldCheck, Loader2
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { extractAndValidateResume } from '../services/gemini'
+import { extractAndValidateResume, buildOfflineExtractionResult } from '../services/gemini'
+import { parseDocumentFile } from '../utils/documentParser'
 import type { NavItem } from '../components/layout/Sidebar'
 
 export interface StoredResume {
@@ -16,95 +17,31 @@ export interface StoredResume {
   fileName: string
   fileSize: string
   uploadedAt: string
-  matchScore: number
-  tier: 'tier_1_match' | 'tier_2_potential' | 'tier_3_mismatch'
+  matchScore: number | null
+  tier: 'tier_1_match' | 'tier_2_potential' | 'tier_3_mismatch' | null
   resumeText: string
   skills: string[]
   storageUrl?: string
 }
 
-const INITIAL_RESUMES: StoredResume[] = [
-  {
-    id: 'res-1',
-    candidateName: 'Arjun Mehta',
-    targetRole: 'Senior Full-Stack & Distributed Systems Engineer',
-    fileName: 'Arjun_Mehta_Senior_FullStack_2026.pdf',
-    fileSize: '142 KB',
-    uploadedAt: 'Today at 00:15',
-    matchScore: 94,
-    tier: 'tier_1_match',
-    skills: ['React 18', 'TypeScript', 'Node.js', 'PostgreSQL', 'Distributed Systems', 'Kafka', 'Redis', 'Docker'],
-    resumeText: `ARJUN MEHTA
-Lead Full-Stack Engineer | Distributed Systems Specialist
-Email: arjun.mehta@devmail.io | Phone: +1 (555) 234-5678 | GitHub: github.com/arjunmehta-dev
+import { SAMPLE_CANDIDATES } from '../data/sampleCandidates'
 
-SUMMARY:
-Senior Full-Stack & Distributed Systems Engineer with 6+ years designing, scaling, and maintaining mission-critical microservices, real-time event-driven pipelines, and high-performance web applications.
-
-EXPERIENCE:
-Staff Software Engineer — Apex Cloud Systems (2022 - Present)
-• Architected event-driven distributed streaming pipelines using Kafka and Node.js microservices processing 45M events/day.
-• Spearheaded migration from legacy monolithic architecture to React 18 / TypeScript frontend with Next.js SSR.
-• Optimized PostgreSQL query execution plans, reducing p99 latency from 420ms to 48ms.
-
-Senior Frontend & Backend Engineer — NovaTech Solutions (2020 - 2022)
-• Built real-time analytics dashboard with React, TypeScript, and Redis caching.
-• Designed RESTful and GraphQL APIs deployed on Kubernetes clusters with zero-downtime CI/CD pipelines.
-
-EDUCATION & CERTIFICATIONS:
-• B.Tech in Computer Science & Engineering — IIT Bombay (2016 - 2020)
-• AWS Certified Solutions Architect — Associate (2023)`
-  },
-  {
-    id: 'res-2',
-    candidateName: 'Priya Sharma',
-    targetRole: 'Senior Full-Stack Engineer',
-    fileName: 'Priya_Sharma_Staff_Frontend.pdf',
-    fileSize: '118 KB',
-    uploadedAt: 'Yesterday at 18:40',
-    matchScore: 88,
-    tier: 'tier_1_match',
-    skills: ['React', 'TypeScript', 'Node.js', 'GraphQL', 'PostgreSQL', 'Tailwind CSS', 'AWS'],
-    resumeText: `PRIYA SHARMA
-Senior Full-Stack Engineer & Frontend Tech Lead
-Email: priya.sharma@techfolio.dev | Portfolio: priyasharma.io
-
-SUMMARY:
-Passionate engineer with 5.5 years of experience delivering modern web architectures, enterprise design systems, and robust Node.js backend integrations.
-
-EXPERIENCE:
-Senior Engineer — Lattice Dynamics (2021 - Present)
-• Led frontend modernization converting complex workflows into modular React and TypeScript components.
-• Designed backend aggregation services using Node.js and PostgreSQL.
-• Implemented automated CI/CD and comprehensive end-to-end testing with Playwright.
-
-Software Engineer — CloudScale Labs (2019 - 2021)
-• Built customer-facing portals using React, Redux, and Node.js.
-• Mentored 4 junior engineers on clean code and system design.`
-  },
-  {
-    id: 'res-3',
-    candidateName: 'David Kim',
-    targetRole: 'Junior Full-Stack Engineer',
-    fileName: 'David_Kim_Junior_Developer.pdf',
-    fileSize: '98 KB',
-    uploadedAt: 'Sep 19, 2026',
-    matchScore: 31,
-    tier: 'tier_3_mismatch',
-    skills: ['JavaScript', 'HTML/CSS', 'Python', 'Flask'],
-    resumeText: `DAVID KIM
-Junior Software Developer
-Email: david.kim@campusmail.com
-
-SUMMARY:
-Recent graduate with 1 year internship experience in Python, Flask, and basic HTML/CSS scripting. Eager to transition into full-stack engineering.
-
-EXPERIENCE:
-Junior Web Intern — WebSpark Studio (2025 - 2026)
-• Maintained landing pages using HTML, CSS, and vanilla JavaScript.
-• Wrote simple automation scripts in Python.`
-  },
-]
+const INITIAL_RESUMES: StoredResume[] = SAMPLE_CANDIDATES.map((cand, idx) => ({
+  id: `res-${idx + 1}`,
+  candidateName: cand.name,
+  targetRole: cand.role,
+  fileName: `${cand.name.replace(/\s+/g, '_')}_Resume.pdf`,
+  fileSize: `${120 + idx * 18} KB`,
+  uploadedAt: idx === 0 ? 'Today at 00:15' : idx === 1 ? 'Yesterday at 18:40' : 'Sep 19, 2026',
+  matchScore: cand.expectedScore,
+  tier: cand.tier,
+  skills: cand.role.includes('Frontend')
+    ? ['React', 'TypeScript', 'Tailwind CSS', 'Redux', 'Jest']
+    : cand.role.includes('Junior')
+    ? ['JavaScript', 'HTML/CSS', 'React', 'Git']
+    : ['React 18', 'TypeScript', 'Node.js', 'PostgreSQL', 'Distributed Systems', 'Kafka'],
+  resumeText: cand.resumeText,
+}))
 
 const TIER_COLORS: Record<string, { bg: string; color: string; label: string }> = {
   tier_1_match: { bg: 'var(--color-emerald-subtle)', color: 'var(--color-emerald)', label: 'Top Match (80%+)' },
@@ -152,13 +89,6 @@ export function ResumesPage({ onNavigate, initialSelectedResumeId }: ResumesPage
     setUploading(true)
 
     try {
-      const ext = file.name.split('.').pop()?.toLowerCase() || ''
-      const isImg = ['png', 'jpg', 'jpeg', 'webp'].includes(ext)
-      const isPdf = ext === 'pdf'
-
-      let extractedText = ''
-      let candidateName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
-
       // Attempt Supabase storage upload
       try {
         const filePath = `resumes/${Date.now()}_${file.name.replace(/\s+/g, '_')}`
@@ -167,32 +97,38 @@ export function ResumesPage({ onNavigate, initialSelectedResumeId }: ResumesPage
         console.warn('Storage bucket fallback active:', storageErr)
       }
 
-      // OCR / Parsing
-      if (isImg || isPdf) {
+      const parsed = await parseDocumentFile(file)
+
+      if (parsed.isPdfOrImage) {
         const reader = new FileReader()
         reader.onload = async (event) => {
           try {
             const base64Url = event.target?.result as string
             const base64 = base64Url.split(',')[1] || ''
-            const mimeType = file.type || (isPdf ? 'application/pdf' : 'image/jpeg')
-            const res = await extractAndValidateResume({ base64, mimeType, fileName: file.name })
-            if (res.is_resume) {
-              extractedText = res.formatted_resume_text || ''
-              candidateName = res.candidate_name || candidateName
-            } else {
-              extractedText = `Uploaded document: ${file.name}\n${res.rejection_reason || 'Document ingested.'}`
+            const mimeType = file.type || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg')
+            let res
+            try {
+              res = await extractAndValidateResume({ base64, mimeType, fileName: file.name })
+            } catch {
+              res = buildOfflineExtractionResult(file.name, file.name)
             }
-          } catch {
-            extractedText = `Uploaded candidate resume: ${file.name}`
+            processExtractedResume(file, res, '')
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Error reading document'
+            setUploadError(msg)
+            setUploading(false)
           }
-          saveNewResume(file, candidateName, extractedText)
         }
         reader.readAsDataURL(file)
         return
       } else {
-        const text = await file.text()
-        extractedText = text
-        saveNewResume(file, candidateName, extractedText)
+        let res
+        try {
+          res = await extractAndValidateResume({ text: parsed.text, fileName: file.name })
+        } catch {
+          res = buildOfflineExtractionResult(parsed.text, file.name)
+        }
+        processExtractedResume(file, res, parsed.text)
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error uploading resume'
@@ -201,17 +137,39 @@ export function ResumesPage({ onNavigate, initialSelectedResumeId }: ResumesPage
     }
   }
 
-  const saveNewResume = (file: File, name: string, text: string) => {
+  const processExtractedResume = (file: File, res: any, rawText: string) => {
+    if (!res.is_resume) {
+      setUploadError(res.rejection_reason || 'The uploaded file does not appear to be a candidate resume. Please upload a valid resume (PDF, DOCX, or Image).')
+      setUploading(false)
+      return
+    }
+
+    const fallbackName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
+    const name = res.candidate_name || fallbackName
+    const role = res.current_title || 'Software Engineer'
+    const skills = (res.skills && res.skills.length > 0) ? res.skills : ['Engineering', 'Software Development']
+    const text = res.formatted_resume_text || res.summary || rawText || `Candidate Resume: ${name}\nFile: ${file.name}`
+
+    saveNewResume(file, name, role, skills, text)
+  }
+
+  const saveNewResume = (
+    file: File,
+    name: string,
+    targetRole: string,
+    skills: string[],
+    text: string
+  ) => {
     const newResume: StoredResume = {
       id: 'res-' + Date.now(),
       candidateName: name,
-      targetRole: 'Senior Full-Stack Engineer',
+      targetRole: targetRole || 'Senior Full-Stack Engineer',
       fileName: file.name,
       fileSize: `${Math.round(file.size / 1024)} KB`,
       uploadedAt: 'Just now',
-      matchScore: 92,
-      tier: 'tier_1_match',
-      skills: ['React', 'TypeScript', 'Node.js', 'System Architecture'],
+      matchScore: null,
+      tier: null,
+      skills: skills.length > 0 ? skills : ['React', 'TypeScript', 'Node.js', 'System Architecture'],
       resumeText: text || `Candidate Resume: ${name}\nFile: ${file.name}`,
     }
 
@@ -283,7 +241,7 @@ export function ResumesPage({ onNavigate, initialSelectedResumeId }: ResumesPage
               onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.02)')}
               onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
             >
-              {uploading ? <Loader2 size={15} className="spin" /> : <Upload size={15} />}
+              {uploading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={15} />}
               <span>{uploading ? 'Parsing Resume…' : 'Upload Resume'}</span>
             </button>
           </div>
@@ -363,7 +321,7 @@ export function ResumesPage({ onNavigate, initialSelectedResumeId }: ResumesPage
             </thead>
             <tbody>
               {filtered.map(resume => {
-                const tierStyle = TIER_COLORS[resume.tier] || TIER_COLORS['tier_2_potential']
+                const tierStyle = (resume.tier && TIER_COLORS[resume.tier]) ? TIER_COLORS[resume.tier] : TIER_COLORS['tier_2_potential']
                 return (
                   <tr
                     key={resume.id}
@@ -407,13 +365,24 @@ export function ResumesPage({ onNavigate, initialSelectedResumeId }: ResumesPage
                     </td>
                     <td style={{ padding: '14px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                        <span style={{
-                          padding: '2px 8px', borderRadius: 4,
-                          background: tierStyle.bg, color: tierStyle.color,
-                          fontSize: 11, fontWeight: 800,
-                        }}>
-                          {resume.matchScore}%
-                        </span>
+                        {resume.matchScore !== null && resume.matchScore !== undefined && resume.tier ? (
+                          <span style={{
+                            padding: '2px 8px', borderRadius: 4,
+                            background: tierStyle.bg, color: tierStyle.color,
+                            fontSize: 11, fontWeight: 800,
+                          }}>
+                            {resume.matchScore}%
+                          </span>
+                        ) : (
+                          <span style={{
+                            padding: '3px 8px', borderRadius: 4,
+                            background: 'var(--color-surface-elevated)', color: 'var(--color-accent)',
+                            border: '1px solid var(--color-accent-border)',
+                            fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
+                          }}>
+                            Pending Screening
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td style={{ padding: '14px 18px', textAlign: 'right' }}>
@@ -476,14 +445,25 @@ export function ResumesPage({ onNavigate, initialSelectedResumeId }: ResumesPage
                   <h3 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--color-text-primary)' }}>
                     {viewingResume.candidateName} — Resume Preview
                   </h3>
-                  <span style={{
-                    padding: '2px 8px', borderRadius: 4,
-                    background: TIER_COLORS[viewingResume.tier]?.bg,
-                    color: TIER_COLORS[viewingResume.tier]?.color,
-                    fontSize: 10, fontWeight: 900,
-                  }}>
-                    {viewingResume.matchScore}% Match
-                  </span>
+                  {viewingResume.matchScore !== null && viewingResume.matchScore !== undefined && viewingResume.tier ? (
+                    <span style={{
+                      padding: '2px 8px', borderRadius: 4,
+                      background: TIER_COLORS[viewingResume.tier]?.bg,
+                      color: TIER_COLORS[viewingResume.tier]?.color,
+                      fontSize: 10, fontWeight: 900,
+                    }}>
+                      {viewingResume.matchScore}% Match
+                    </span>
+                  ) : (
+                    <span style={{
+                      padding: '3px 8px', borderRadius: 4,
+                      background: 'var(--color-surface)', color: 'var(--color-accent)',
+                      border: '1px solid var(--color-accent-border)',
+                      fontSize: 10, fontWeight: 800,
+                    }}>
+                      Pending Screening
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>
                   {viewingResume.fileName} • {viewingResume.targetRole}
@@ -558,8 +538,24 @@ export function ResumesPage({ onNavigate, initialSelectedResumeId }: ResumesPage
               {onNavigate && (
                 <button
                   onClick={() => {
+                    const textToScreen = viewingResume.resumeText
+                    const candName = viewingResume.candidateName
+                    const candRole = viewingResume.targetRole
+                    const candId = viewingResume.id
                     setViewingResume(null)
                     onNavigate('screening')
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent('vetta:load-sample-candidate', {
+                        detail: {
+                          id: candId,
+                          name: candName,
+                          role: candRole,
+                          tagline: candRole,
+                          expectedScore: 90,
+                          resumeText: textToScreen,
+                        }
+                      }))
+                    }, 60)
                   }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
@@ -576,6 +572,8 @@ export function ResumesPage({ onNavigate, initialSelectedResumeId }: ResumesPage
           </div>
         </div>
       )}
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

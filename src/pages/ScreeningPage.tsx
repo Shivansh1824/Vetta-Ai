@@ -4,7 +4,8 @@ import {
   Upload, Loader2, CheckCircle2, AlertTriangle,
   Brain, ChevronDown, ChevronRight, Sparkles, Briefcase,
 } from 'lucide-react'
-import { analyzeResume, buildOfflineScreeningResult, extractAndValidateResume } from '../services/gemini'
+import { analyzeResume, buildOfflineScreeningResult, extractAndValidateResume, buildOfflineExtractionResult } from '../services/gemini'
+import { parseDocumentFile } from '../utils/documentParser'
 import type { Job, GeminiScreeningResult, Tier, RequirementStatus, FlagSeverity } from '../types'
 import { SAMPLE_CANDIDATES } from '../data/sampleCandidates'
 import type { SampleCandidate } from '../data/sampleCandidates'
@@ -82,67 +83,65 @@ export function ScreeningPage({ onNavigate }: ScreeningPageProps = {}) {
     return () => window.removeEventListener('vetta:load-sample-candidate', handler)
   }, [])
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     setError(null)
     setLoading(true)
 
-    const ext = file.name.split('.').pop()?.toLowerCase() || ''
-    const isImg = ['png', 'jpg', 'jpeg', 'webp'].includes(ext)
-    const isPdf = ext === 'pdf'
+    try {
+      const parsed = await parseDocumentFile(file)
 
-    if (isImg || isPdf) {
-      const reader = new FileReader()
-      reader.onload = async (event) => {
-        const base64Url = event.target?.result as string
-        const base64 = base64Url.split(',')[1] || ''
-        const mimeType = file.type || (isPdf ? 'application/pdf' : 'image/jpeg')
-        try {
-          const res = await extractAndValidateResume({ base64, mimeType, fileName: file.name })
-          if (!res.is_resume) {
-            setError(res.rejection_reason || 'The resume you have uploaded is not a resume. You have uploaded something else. Please upload a valid candidate resume.')
-            setResumeText('')
-            setFileName(null)
-          } else {
-            setResumeText(res.formatted_resume_text || '')
-            setCandidateName(res.candidate_name || file.name.replace(/\.[^/.]+$/, ''))
-            setFileName(file.name)
-            setIsSample(false)
-            setActiveSampleId(null)
+      if (parsed.isPdfOrImage) {
+        const reader = new FileReader()
+        reader.onload = async (event) => {
+          const base64Url = event.target?.result as string
+          const base64 = base64Url.split(',')[1] || ''
+          const mimeType = file.type || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg')
+          let res
+          try {
+            res = await extractAndValidateResume({ base64, mimeType, fileName: file.name })
+          } catch {
+            res = buildOfflineExtractionResult(file.name, file.name)
           }
-        } catch {
-          setError('Error analyzing document.')
-        } finally {
-          setLoading(false)
+          applyScreeningDocResult(file, res, '')
         }
-      }
-      reader.readAsDataURL(file)
-    } else {
-      const reader = new FileReader()
-      reader.onload = async (event) => {
-        const text = (event.target?.result as string) || ''
+        reader.readAsDataURL(file)
+        return
+      } else {
+        let res
         try {
-          const res = await extractAndValidateResume({ text, fileName: file.name })
-          if (!res.is_resume) {
-            setError(res.rejection_reason || 'The resume you have uploaded is not a resume. You have uploaded something else. Please upload a valid candidate resume.')
-            setResumeText('')
-            setFileName(null)
-          } else {
-            setResumeText(res.formatted_resume_text || text)
-            setCandidateName(res.candidate_name || file.name.replace(/\.[^/.]+$/, ''))
-            setFileName(file.name)
-            setIsSample(false)
-            setActiveSampleId(null)
-          }
+          res = await extractAndValidateResume({ text: parsed.text, fileName: file.name })
         } catch {
-          setError('Error reading file.')
-        } finally {
-          setLoading(false)
+          res = buildOfflineExtractionResult(parsed.text, file.name)
         }
+        applyScreeningDocResult(file, res, parsed.text)
       }
-      reader.readAsText(file)
+    } catch {
+      const fallback = buildOfflineExtractionResult(file.name, file.name)
+      applyScreeningDocResult(file, fallback, '')
     }
+  }
+
+  const applyScreeningDocResult = (file: File, res: any, rawText: string) => {
+    setLoading(false)
+    if (!res.is_resume) {
+      setError(res.rejection_reason || 'The document you have uploaded is not a resume. Please upload a valid candidate resume.')
+      setResumeText('')
+      setFileName(null)
+      return
+    }
+
+    const fallbackName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
+    const name = res.candidate_name || fallbackName
+    const text = res.formatted_resume_text || res.summary || rawText || `Candidate Resume: ${name}\nFile: ${file.name}`
+
+    setResumeText(text)
+    setCandidateName(name)
+    setFileName(file.name)
+    setIsSample(false)
+    setActiveSampleId(null)
+    setError(null)
   }
 
   const handleRun = async () => {
