@@ -5,12 +5,10 @@ import {
   FileUp, Image as ImageIcon, FileCode, CheckCircle2,
   Trash2, RefreshCw, Brain, AlertCircle
 } from 'lucide-react'
-import type { SampleCandidate } from '../../../data/sampleCandidates'
 import { extractAndValidateResume, buildOfflineExtractionResult } from '../../../services/gemini'
 import { saveCandidateToDatabase } from '../../../services/candidateStorage'
 import { JsonExtractionViewer } from './JsonExtractionViewer'
 import { ExtractedCandidateForm } from './ExtractedCandidateForm'
-import { DemoCandidateSelector } from './DemoCandidateSelector'
 
 export interface CandidateIntakeData {
   id?: string | null
@@ -62,37 +60,7 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
     }
   }, [processingStage])
 
-  // Pre-fill demo candidate data (100% editable)
-  const handleLoadSample = (sample: SampleCandidate) => {
-    setProcessingStage('success')
-    setRejectionReason(null)
-    setIsDatabaseSaved(true)
-    const sampleJson = {
-      is_resume: true,
-      candidate_name: sample.name,
-      email: `${sample.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
-      current_title: sample.role,
-      total_years_exp: 7,
-      skills: ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Distributed Systems'],
-      summary: sample.tagline,
-      formatted_resume_text: sample.resumeText,
-    }
-    onChange({
-      id: sample.id,
-      candidateName: sample.name,
-      candidateEmail: `${sample.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
-      currentTitle: sample.role,
-      totalYearsExp: 7,
-      skills: ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Distributed Systems'],
-      summary: sample.tagline,
-      resumeText: sample.resumeText,
-      isSampleData: true,
-      sampleId: sample.id,
-      uploadedFileName: null,
-      fileFormat: 'text',
-      rawJson: sampleJson,
-    })
-  }
+
 
   // Process live uploaded files with Gemini Flash OCR & Resume Validation
   const handleFilesSelected = async (files: FileList | null) => {
@@ -337,14 +305,7 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
         </p>
       </div>
 
-      {/* Demo Quick Access - Removed if user uploads a document */}
-      {!hasUploadedDoc && (
-        <DemoCandidateSelector
-          selectedSampleId={data.sampleId}
-          isSampleActive={data.isSampleData}
-          onSelectSample={handleLoadSample}
-        />
-      )}
+
 
       {/* Hidden Native File Input (accepts PDFs, images, text, and docx) */}
       <input
