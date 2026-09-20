@@ -127,7 +127,6 @@ export function AppShell() {
         isOpen={isOnboardingModalOpen}
         onClose={() => setIsOnboardingModalOpen(false)}
         onComplete={handleOnboardingComplete}
-        onGoToInterview={() => setActivePage('interview')}
       />
     </div>
   )

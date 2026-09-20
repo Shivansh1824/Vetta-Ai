@@ -31,8 +31,8 @@ interface Props {
   result: GeminiScreeningResult | null
   errorMsg: string | null
   onPrev: () => void
+  onNextStage7: () => void
   onCompleteAndEnterDashboard: () => void
-  onGoToInterview: () => void
 }
 
 export function ScreeningResultsStep({
@@ -42,8 +42,8 @@ export function ScreeningResultsStep({
   result,
   errorMsg,
   onPrev,
+  onNextStage7,
   onCompleteAndEnterDashboard,
-  onGoToInterview,
 }: Props) {
   const scoreRef = useRef<HTMLSpanElement>(null)
   const hudRef = useRef<HTMLDivElement>(null)
@@ -91,7 +91,7 @@ export function ScreeningResultsStep({
             background: 'var(--color-accent-subtle)', color: 'var(--color-accent)',
             padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 800,
           }}>
-            STEP 4 OF 4
+            STEP 4 OF 5
           </span>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
             AI Screening & Requirement Verification
@@ -334,33 +334,33 @@ export function ScreeningResultsStep({
               <ArrowLeft size={15} /> Back
             </button>
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                type="button"
-                onClick={onGoToInterview}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '10px 18px', borderRadius: 'var(--radius-md)',
-                  background: 'var(--color-surface-elevated)', border: '1px solid var(--color-border)',
-                  color: 'var(--color-text-primary)', fontWeight: 700, fontSize: 'var(--text-sm)',
-                  cursor: 'pointer',
-                }}
-              >
-                <MessageSquare size={15} /> Interview Cockpit
-              </button>
-
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={onCompleteAndEnterDashboard}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '11px 24px', borderRadius: 'var(--radius-md)',
-                  background: 'linear-gradient(135deg, hsl(231,76%,52%), hsl(231,76%,46%))',
-                  color: '#fff', border: 'none', fontWeight: 800, fontSize: 'var(--text-sm)',
-                  cursor: 'pointer', boxShadow: '0 2px 10px hsla(231,76%,52%,0.25)',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '10px 16px', borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-surface-elevated)', border: '1px solid var(--color-border)',
+                  color: 'var(--color-text-secondary)', fontWeight: 700, fontSize: 'var(--text-xs)',
+                  cursor: 'pointer',
                 }}
               >
-                <LayoutDashboard size={16} /> Complete & Open Dashboard <ArrowRight size={16} />
+                <LayoutDashboard size={14} /> Skip to Dashboard
+              </button>
+
+              <button
+                type="button"
+                onClick={onNextStage7}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '11px 22px', borderRadius: 'var(--radius-md)',
+                  background: 'linear-gradient(135deg, hsl(231,76%,52%), hsl(231,76%,44%))',
+                  color: '#fff', border: 'none', fontWeight: 800, fontSize: 'var(--text-sm)',
+                  cursor: 'pointer', boxShadow: '0 2px 12px hsla(231,76%,52%,0.28)',
+                }}
+              >
+                <MessageSquare size={16} /> Proceed to Stage 7: Interview Cockpit & Memo <ArrowRight size={16} />
               </button>
             </div>
           </div>

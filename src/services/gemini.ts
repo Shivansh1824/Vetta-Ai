@@ -321,6 +321,38 @@ Generate 8-12 questions. Prioritize: 1) Probing detected flags 2) Verifying must
   return parseJSON<GeminiInterviewResult>(raw)
 }
 
+export function buildOfflineInterviewQuestions(_job?: Job, _candidateName?: string): GeminiInterviewResult {
+  return {
+    questions: [
+      {
+        question_text: `You led the migration of a monolith dashboard to React 18 and TypeScript with a 64% latency drop. How did you structure your concurrent rendering and state boundaries?`,
+        target_criterion: 'React + TypeScript',
+        difficulty: 'advanced',
+      },
+      {
+        question_text: `In your event stream engine handling 120,000 events/sec, what partitioning strategy and consumer group configuration did you use in Kafka to prevent head-of-line blocking?`,
+        target_criterion: 'Distributed Systems & Kafka',
+        difficulty: 'advanced',
+      },
+      {
+        question_text: `How do you handle PostgreSQL advisory locks in distributed transactions to guarantee zero duplicate processing during microservice failovers?`,
+        target_criterion: 'PostgreSQL / SQL',
+        difficulty: 'intermediate',
+      },
+      {
+        question_text: `Your resume lists Kubernetes and Docker. Describe how you authored your Helm charts and configured HPA (Horizontal Pod Autoscaling) for traffic surges.`,
+        target_criterion: 'Kubernetes & Docker',
+        difficulty: 'intermediate',
+      },
+      {
+        question_text: `Walk me through how you design idempotent API endpoints when upstream clients retry on transient network timeouts.`,
+        target_criterion: 'Microservices & Idempotency',
+        difficulty: 'foundational',
+      },
+    ],
+  }
+}
+
 // ─── Offline deterministic fallback ─────────────────────────────────────────
 
 export function buildOfflineScreeningResult(resumeText: string, job: Job): GeminiScreeningResult {

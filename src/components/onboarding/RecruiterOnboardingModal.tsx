@@ -5,6 +5,7 @@ import { RecruiterProfileStep, type RecruiterProfileData } from './steps/Recruit
 import { JobRoleSetupStep, type JobRoleData } from './steps/JobRoleSetupStep'
 import { CandidateUploadStep, type CandidateIntakeData } from './steps/CandidateUploadStep'
 import { ScreeningResultsStep } from './steps/ScreeningResultsStep'
+import { Stage7InterviewStep } from './steps/Stage7InterviewStep'
 import { analyzeResume, buildOfflineScreeningResult } from '../../services/gemini'
 import { saveCandidateToDatabase } from '../../services/candidateStorage'
 import type { Job, GeminiScreeningResult } from '../../types'
@@ -18,11 +19,10 @@ interface Props {
     candidate: CandidateIntakeData
     screeningResult: GeminiScreeningResult | null
   }) => void
-  onGoToInterview?: (candidateName: string, resumeText: string) => void
 }
 
-export function RecruiterOnboardingModal({ isOpen, onClose, onComplete, onGoToInterview }: Props) {
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1)
+export function RecruiterOnboardingModal({ isOpen, onClose, onComplete }: Props) {
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1)
 
   // Step 1: Recruiter Profile State (Pre-filled for hackathon demo access, 100% editable)
   const [recruiterData, setRecruiterData] = useState<RecruiterProfileData>({
@@ -131,13 +131,6 @@ export function RecruiterOnboardingModal({ isOpen, onClose, onComplete, onGoToIn
     onClose()
   }
 
-  const handleGoToInterview = () => {
-    if (onGoToInterview) {
-      onGoToInterview(candidateData.candidateName, candidateData.resumeText)
-    }
-    handleCompleteAndEnterDashboard()
-  }
-
   if (!isOpen) return null
 
   const stepsList = [
@@ -145,6 +138,7 @@ export function RecruiterOnboardingModal({ isOpen, onClose, onComplete, onGoToIn
     { num: 2, label: 'Hiring Role' },
     { num: 3, label: 'Candidate Intake' },
     { num: 4, label: 'AI Screening' },
+    { num: 5, label: 'Stage 7 Cockpit & Memo' },
   ]
 
   return (
@@ -161,7 +155,7 @@ export function RecruiterOnboardingModal({ isOpen, onClose, onComplete, onGoToIn
       <div
         ref={cardRef}
         style={{
-          width: '100%', maxWidth: 860, maxHeight: '92vh',
+          width: '100%', maxWidth: 880, maxHeight: '94vh',
           background: 'var(--color-surface)', border: '1px solid var(--color-border)',
           borderRadius: 'var(--radius-xl)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
@@ -242,8 +236,19 @@ export function RecruiterOnboardingModal({ isOpen, onClose, onComplete, onGoToIn
               result={screeningResult}
               errorMsg={errorMsg}
               onPrev={() => setCurrentStep(3)}
+              onNextStage7={() => setCurrentStep(5)}
               onCompleteAndEnterDashboard={handleCompleteAndEnterDashboard}
-              onGoToInterview={handleGoToInterview}
+            />
+          )}
+
+          {currentStep === 5 && (
+            <Stage7InterviewStep
+              candidateName={candidateData.candidateName || 'Candidate'}
+              candidateResume={candidateData.resumeText}
+              job={jobData}
+              screeningResult={screeningResult}
+              onPrev={() => setCurrentStep(4)}
+              onCompleteAndEnterDashboard={handleCompleteAndEnterDashboard}
             />
           )}
         </div>
