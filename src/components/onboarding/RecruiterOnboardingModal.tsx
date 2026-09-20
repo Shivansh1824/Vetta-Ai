@@ -43,32 +43,15 @@ export function RecruiterOnboardingModal({ isOpen, onClose, onComplete, onGoToIn
     descriptionText: 'Designing resilient microservices, scaling transactional data pipelines with PostgreSQL, and architecting real-time interactive user interfaces in modern React.',
   })
 
-  // Step 3: Candidate Intake State
+  // Step 3: Candidate Intake State (Starts clean; demo fast-track candidate can be chosen or file uploaded)
   const [candidateData, setCandidateData] = useState<CandidateIntakeData>({
-    candidateName: 'Arjun Mehta',
-    candidateEmail: 'arjun.mehta@example.com',
-    resumeText: `ARJUN MEHTA
-San Francisco, CA | arjun.mehta.tech@example.com | github.com/arjunm
-
-SUMMARY:
-7+ years experience designing distributed cloud architectures, high-concurrency microservices, and reactive full-stack web applications. Track record of scaling systems to 120k+ req/sec with 99.99% availability.
-
-TECHNICAL SKILLS:
-- Languages: TypeScript, JavaScript, Go, Python, SQL
-- Frontend: React 18, Next.js, Redux Toolkit, Tailwind CSS, GSAP
-- Backend & Systems: Node.js, Express, Go, Distributed Systems, Kafka, Redis, gRPC
-- Databases: PostgreSQL, CockroachDB, DynamoDB
-- DevOps: Docker, Kubernetes, AWS (ECS, Lambda, RDS), Terraform
-
-EXPERIENCE:
-Staff Platform Engineer | Apex Cloud Systems (2022 - Present)
-- Architected distributed event stream engine handling 120,000 events/sec using Kafka and Go.
-- Led migration of monolith dashboard to React 18 + TypeScript, reducing initial load latency by 64%.
-- Designed idempotent database transactions with PostgreSQL advisory locks and distributed Redis cache.`,
-    isSampleData: true,
-    sampleId: 'sample-1',
+    candidateName: '',
+    candidateEmail: '',
+    resumeText: '',
+    isSampleData: false,
+    sampleId: null,
     uploadedFileName: null,
-    fileFormat: 'text',
+    fileFormat: null,
   })
 
   // Step 4: AI Screening State

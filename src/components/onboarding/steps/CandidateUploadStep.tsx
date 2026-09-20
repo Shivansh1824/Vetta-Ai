@@ -88,6 +88,16 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
       }
     })
     setBatchList(docItems)
+    // Immediately clear sample mode upon file selection
+    onChange({
+      isSampleData: false,
+      sampleId: null,
+      uploadedFileName: primaryFile.name,
+      fileFormat: formatType,
+      candidateName: '',
+      candidateEmail: '',
+      resumeText: '',
+    })
 
     // Phase 1: Uploading
     setProcessingStage('uploading')
@@ -184,6 +194,9 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
     setProcessingStage('idle')
     setRejectionReason(null)
     setBatchList([])
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
     onChange({
       candidateName: '',
       candidateEmail: '',
@@ -194,6 +207,31 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
       fileFormat: null,
     })
   }
+
+  const handleTryAgain = () => {
+    setProcessingStage('idle')
+    setRejectionReason(null)
+    setBatchList([])
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+    onChange({
+      candidateName: '',
+      candidateEmail: '',
+      resumeText: '',
+      isSampleData: false,
+      sampleId: null,
+      uploadedFileName: null,
+      fileFormat: null,
+    })
+    // Immediately open file picker to let user try again with another file
+    setTimeout(() => {
+      fileInputRef.current?.click()
+    }, 50)
+  }
+
+  // Once someone uploads a document or starts processing, completely remove the hackathon fast-track demo section
+  const hasUploadedDoc = Boolean(data.uploadedFileName || ['uploading', 'extracting', 'rejected'].includes(processingStage) || (!data.isSampleData && data.resumeText.length > 0))
 
   const canProceed = data.resumeText.trim().length > 0 && processingStage !== 'rejected'
 
@@ -220,8 +258,9 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
         </p>
       </div>
 
-      {/* Demo Quick Access */}
-      <div style={{
+      {/* Demo Quick Access - Removed if user uploads a document */}
+      {!hasUploadedDoc && (
+        <div style={{
         background: data.isSampleData ? 'var(--color-accent-subtle)' : 'var(--color-surface-elevated)',
         border: `1.5px ${data.isSampleData ? 'solid var(--color-accent)' : 'dashed var(--color-border)'}`,
         borderRadius: 'var(--radius-lg)', padding: '16px', display: 'flex', flexDirection: 'column', gap: 10,
@@ -280,6 +319,7 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
           })}
         </div>
       </div>
+      )}
 
       {/* Multi-Format File Dropzone (PDF, Images, Multiple Documents) */}
       <div
@@ -367,18 +407,46 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
       {/* Validation Rejection Error Alert */}
       {processingStage === 'rejected' && rejectionReason && (
         <div style={{
-          padding: '14px 18px', borderRadius: 'var(--radius-md)',
+          padding: '16px 18px', borderRadius: 'var(--radius-md)',
           background: 'var(--color-rose-subtle)', border: '1.5px solid var(--color-rose)',
           display: 'flex', alignItems: 'flex-start', gap: 12,
         }}>
-          <AlertCircle size={18} style={{ color: 'var(--color-rose)', marginTop: 2, flexShrink: 0 }} />
-          <div>
+          <AlertCircle size={20} style={{ color: 'var(--color-rose)', marginTop: 2, flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: 'var(--text-sm)', color: 'var(--color-rose)' }}>
               Invalid Document Type Detected
             </div>
-            <p style={{ margin: '4px 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+            <p style={{ margin: '4px 0 12px', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
               {rejectionReason}
             </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleTryAgain}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '7px 16px', borderRadius: 'var(--radius-sm, 6px)',
+                  background: 'var(--color-rose)', color: '#fff',
+                  border: 'none', fontWeight: 800, fontSize: 'var(--text-xs)',
+                  cursor: 'pointer', boxShadow: '0 2px 8px hsla(350,89%,60%,0.25)',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <RefreshCw size={13} /> Try Again
+              </button>
+              <button
+                type="button"
+                onClick={handleClear}
+                style={{
+                  padding: '7px 14px', borderRadius: 'var(--radius-sm, 6px)',
+                  background: '#fff', color: 'var(--color-text-secondary)',
+                  border: '1px solid var(--color-border)', fontWeight: 600, fontSize: 'var(--text-xs)',
+                  cursor: 'pointer',
+                }}
+              >
+                Choose Different File
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -465,22 +533,14 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
             placeholder="Candidate Full Name"
             value={data.candidateName}
             onChange={e => onChange({ candidateName: e.target.value, isSampleData: false })}
-            style={{
-              padding: '10px 12px', border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
-              background: 'var(--color-surface)', outline: 'none',
-            }}
+            style={{ padding: '10px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', background: 'var(--color-surface)', outline: 'none' }}
           />
           <input
             type="email"
             placeholder="Candidate Email (optional)"
             value={data.candidateEmail}
             onChange={e => onChange({ candidateEmail: e.target.value, isSampleData: false })}
-            style={{
-              padding: '10px 12px', border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
-              background: 'var(--color-surface)', outline: 'none',
-            }}
+            style={{ padding: '10px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', background: 'var(--color-surface)', outline: 'none' }}
           />
         </div>
 
@@ -488,13 +548,12 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
           value={data.resumeText}
           onChange={e => onChange({ resumeText: e.target.value, isSampleData: false })}
           placeholder="Extracted resume text will appear here. You can freely edit, append, or review before screening…"
-          rows={9}
+          rows={8}
           style={{
             width: '100%', padding: '12px 14px', border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
             fontFamily: 'var(--font-mono, monospace)', color: 'var(--color-text-primary)',
-            background: 'var(--color-surface)', resize: 'vertical',
-            lineHeight: 1.5, boxSizing: 'border-box', outline: 'none',
+            background: 'var(--color-surface)', resize: 'vertical', lineHeight: 1.5, boxSizing: 'border-box', outline: 'none',
           }}
         />
       </div>
