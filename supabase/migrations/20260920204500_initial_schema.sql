@@ -3,12 +3,9 @@
 -- Hackathon Track: HireFlow (AI Candidate Screening & Interview Intelligence Agent)
 -- ==============================================================================
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- 1. RECRUITERS TABLE (Step 1: Recruiter Onboarding)
 CREATE TABLE IF NOT EXISTS public.recruiters (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     full_name TEXT NOT NULL,
     email TEXT,
     role_title TEXT NOT NULL, -- e.g. 'Lead Technical Recruiter', 'Hiring Manager'
@@ -18,7 +15,7 @@ CREATE TABLE IF NOT EXISTS public.recruiters (
 
 -- 2. JOBS TABLE (Step 2: Job Role Creation)
 CREATE TABLE IF NOT EXISTS public.jobs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     recruiter_id UUID REFERENCES public.recruiters(id) ON DELETE SET NULL,
     title TEXT NOT NULL,
     department TEXT,
@@ -32,7 +29,7 @@ CREATE TABLE IF NOT EXISTS public.jobs (
 
 -- 3. CANDIDATES TABLE (Step 3 & 4: Resume Ingestion & AI Screening)
 CREATE TABLE IF NOT EXISTS public.candidates (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id UUID REFERENCES public.jobs(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     email TEXT,
@@ -49,7 +46,7 @@ CREATE TABLE IF NOT EXISTS public.candidates (
 
 -- 4. CANDIDATE REQUIREMENTS MAPPING (Requirement #3: Map candidate experience against JD)
 CREATE TABLE IF NOT EXISTS public.candidate_requirements (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     candidate_id UUID REFERENCES public.candidates(id) ON DELETE CASCADE,
     requirement_text TEXT NOT NULL,
     status TEXT CHECK (status IN ('met', 'partial', 'missing')) DEFAULT 'partial',
@@ -60,7 +57,7 @@ CREATE TABLE IF NOT EXISTS public.candidate_requirements (
 
 -- 5. VALIDATION FLAGS (Requirement #4: Inconsistencies, missing info & vague claims)
 CREATE TABLE IF NOT EXISTS public.validation_flags (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     candidate_id UUID REFERENCES public.candidates(id) ON DELETE CASCADE,
     flag_type TEXT CHECK (flag_type IN ('inconsistency', 'missing_info', 'vague_claim', 'unverified_tenure')) NOT NULL,
     description TEXT NOT NULL,
@@ -71,7 +68,7 @@ CREATE TABLE IF NOT EXISTS public.validation_flags (
 
 -- 6. INTERVIEW SESSIONS (Step 6: Live Interview Cockpit)
 CREATE TABLE IF NOT EXISTS public.interview_sessions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     candidate_id UUID REFERENCES public.candidates(id) ON DELETE CASCADE,
     interviewer_notes TEXT DEFAULT '',
     coverage_score INTEGER DEFAULT 0, -- 0 to 100 (% of JD requirements tested)
@@ -82,7 +79,7 @@ CREATE TABLE IF NOT EXISTS public.interview_sessions (
 
 -- 7. INTERVIEW QUESTIONS (Requirements #7 & #8: Tailored questions & adaptive follow-ups)
 CREATE TABLE IF NOT EXISTS public.interview_questions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID REFERENCES public.interview_sessions(id) ON DELETE CASCADE,
     candidate_id UUID REFERENCES public.candidates(id) ON DELETE CASCADE,
     question_text TEXT NOT NULL,
@@ -96,7 +93,7 @@ CREATE TABLE IF NOT EXISTS public.interview_questions (
 
 -- 8. EVALUATION REPORTS (Requirement #11: Standardized interview evaluation report)
 CREATE TABLE IF NOT EXISTS public.evaluation_reports (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID REFERENCES public.interview_sessions(id) ON DELETE CASCADE,
     candidate_id UUID REFERENCES public.candidates(id) ON DELETE CASCADE,
     overall_rating TEXT CHECK (overall_rating IN ('strong_hire', 'hire', 'lean_hire', 'lean_no_hire', 'no_hire')) DEFAULT 'lean_hire',
