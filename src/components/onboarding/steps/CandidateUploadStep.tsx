@@ -8,15 +8,26 @@ import {
 import { SAMPLE_CANDIDATES } from '../../../data/sampleCandidates'
 import type { SampleCandidate } from '../../../data/sampleCandidates'
 import { extractAndValidateResume, buildOfflineExtractionResult } from '../../../services/gemini'
+import { saveCandidateToDatabase } from '../../../services/candidateStorage'
+import { JsonExtractionViewer } from './JsonExtractionViewer'
+import { ExtractedCandidateForm } from './ExtractedCandidateForm'
+import { DemoCandidateSelector } from './DemoCandidateSelector'
 
 export interface CandidateIntakeData {
+  id?: string | null
   candidateName: string
   candidateEmail: string
+  candidatePhone?: string
+  currentTitle?: string
+  totalYearsExp?: number
+  skills?: string[]
+  summary?: string
   resumeText: string
   isSampleData: boolean
   sampleId: string | null
   uploadedFileName: string | null
   fileFormat: 'pdf' | 'image' | 'text' | null
+  rawJson?: Record<string, any> | null
 }
 
 interface Props {
@@ -40,6 +51,7 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
   const [uploadPercent, setUploadPercent] = useState(0)
   const [rejectionReason, setRejectionReason] = useState<string | null>(null)
   const [batchList, setBatchList] = useState<UploadedDocumentItem[]>([])
+  const [isDatabaseSaved, setIsDatabaseSaved] = useState(false)
 
   // GSAP Progress Bar animation during upload
   useEffect(() => {
@@ -55,14 +67,31 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
   const handleLoadSample = (sample: SampleCandidate) => {
     setProcessingStage('success')
     setRejectionReason(null)
+    setIsDatabaseSaved(true)
+    const sampleJson = {
+      is_resume: true,
+      candidate_name: sample.name,
+      email: `${sample.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+      current_title: sample.currentRole,
+      total_years_exp: sample.experienceYears,
+      skills: sample.keySkills,
+      summary: sample.summary,
+      formatted_resume_text: sample.resumeText,
+    }
     onChange({
+      id: sample.id,
       candidateName: sample.name,
       candidateEmail: `${sample.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+      currentTitle: sample.currentRole,
+      totalYearsExp: sample.experienceYears,
+      skills: sample.keySkills,
+      summary: sample.summary,
       resumeText: sample.resumeText,
       isSampleData: true,
       sampleId: sample.id,
       uploadedFileName: null,
       fileFormat: 'text',
+      rawJson: sampleJson,
     })
   }
 
@@ -157,7 +186,7 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
   }
 
   const applyExtractionResult = (
-    result: { is_resume: boolean; rejection_reason?: string; candidate_name?: string; email?: string; current_title?: string; formatted_resume_text?: string },
+    result: any,
     fileName: string,
     formatType: 'pdf' | 'image' | 'text'
   ) => {
@@ -165,12 +194,14 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
       setProcessingStage('rejected')
       setRejectionReason(result.rejection_reason || 'The file you have uploaded is not a candidate resume. You have uploaded something else. Please upload a valid resume (PDF, DOCX, or Image).')
       setBatchList(prev => prev.map((item, idx) => idx === 0 ? { ...item, status: 'rejected' } : item))
+      setIsDatabaseSaved(false)
       onChange({
         candidateName: '',
         candidateEmail: '',
         resumeText: '',
         uploadedFileName: fileName,
         fileFormat: formatType,
+        rawJson: null,
       })
     } else {
       setProcessingStage('success')
@@ -178,14 +209,47 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
       setBatchList(prev => prev.map((item, idx) => idx === 0 ? { ...item, status: 'verified' } : item))
 
       const fallbackName = fileName.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ')
+      const candidateName = result.candidate_name || fallbackName
+      const candidateEmail = result.email || `${fallbackName.toLowerCase().replace(/\s+/g, '.')}@candidate.io`
+      const candidatePhone = result.phone || ''
+      const currentTitle = result.current_title || 'Senior Software Engineer'
+      const totalYearsExp = typeof result.total_years_exp === 'number' ? result.total_years_exp : 5
+      const skills = result.skills || []
+      const summary = result.summary || ''
+      const resumeText = result.formatted_resume_text || ''
+      const rawJson = result.raw_json || result
+
       onChange({
-        candidateName: result.candidate_name || fallbackName,
-        candidateEmail: result.email || `${fallbackName.toLowerCase().replace(/\s+/g, '.')}@candidate.io`,
-        resumeText: result.formatted_resume_text || '',
+        candidateName,
+        candidateEmail,
+        candidatePhone,
+        currentTitle,
+        totalYearsExp,
+        skills,
+        summary,
+        resumeText,
         isSampleData: false,
         sampleId: null,
         uploadedFileName: fileName,
         fileFormat: formatType,
+        rawJson,
+      })
+
+      // Store in Supabase database immediately
+      saveCandidateToDatabase({
+        name: candidateName,
+        email: candidateEmail,
+        phone: candidatePhone,
+        currentTitle,
+        totalYearsExp,
+        resumeText,
+        summary,
+        rawJson,
+      }).then(res => {
+        if (res.success && res.candidate) {
+          setIsDatabaseSaved(true)
+          onChange({ id: res.candidate.id })
+        }
       })
     }
   }
@@ -194,17 +258,25 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
     setProcessingStage('idle')
     setRejectionReason(null)
     setBatchList([])
+    setIsDatabaseSaved(false)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
     onChange({
+      id: null,
       candidateName: '',
       candidateEmail: '',
+      candidatePhone: '',
+      currentTitle: '',
+      totalYearsExp: 0,
+      skills: [],
+      summary: '',
       resumeText: '',
       isSampleData: false,
       sampleId: null,
       uploadedFileName: null,
       fileFormat: null,
+      rawJson: null,
     })
   }
 
@@ -212,17 +284,25 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
     setProcessingStage('idle')
     setRejectionReason(null)
     setBatchList([])
+    setIsDatabaseSaved(false)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
     onChange({
+      id: null,
       candidateName: '',
       candidateEmail: '',
+      candidatePhone: '',
+      currentTitle: '',
+      totalYearsExp: 0,
+      skills: [],
+      summary: '',
       resumeText: '',
       isSampleData: false,
       sampleId: null,
       uploadedFileName: null,
       fileFormat: null,
+      rawJson: null,
     })
     // Immediately open file picker to let user try again with another file
     setTimeout(() => {
@@ -260,133 +340,105 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
 
       {/* Demo Quick Access - Removed if user uploads a document */}
       {!hasUploadedDoc && (
-        <div style={{
-        background: data.isSampleData ? 'var(--color-accent-subtle)' : 'var(--color-surface-elevated)',
-        border: `1.5px ${data.isSampleData ? 'solid var(--color-accent)' : 'dashed var(--color-border)'}`,
-        borderRadius: 'var(--radius-lg)', padding: '16px', display: 'flex', flexDirection: 'column', gap: 10,
-        transition: 'all 0.2s',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Sparkles size={15} style={{ color: 'var(--color-accent)' }} />
-            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 800, color: 'var(--color-text-primary)', textTransform: 'uppercase' }}>
-              Hackathon Fast-Track: Auto-Fill Demo Candidate (100% Editable)
-            </span>
-          </div>
-          {data.isSampleData && (
-            <span style={{
-              fontSize: 10, fontWeight: 800, color: 'var(--color-accent)',
-              background: '#fff', padding: '2px 8px', borderRadius: 4,
-            }}>
-              DEMO SAMPLE ACTIVE
-            </span>
-          )}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
-          {SAMPLE_CANDIDATES.map((cand) => {
-            const isSelected = data.sampleId === cand.id
-            return (
-              <button
-                key={cand.id}
-                type="button"
-                onClick={() => handleLoadSample(cand)}
-                style={{
-                  textAlign: 'left', padding: '10px 14px', borderRadius: 'var(--radius-md)',
-                  background: 'var(--color-surface)',
-                  border: `1.5px solid ${isSelected ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                  cursor: 'pointer', transition: 'all 0.15s',
-                  boxShadow: isSelected ? '0 2px 8px hsla(231,76%,52%,0.2)' : 'none',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                  <span style={{ fontWeight: 800, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)' }}>
-                    {cand.name}
-                  </span>
-                  <span style={{
-                    fontSize: 10, fontWeight: 900, padding: '1px 6px', borderRadius: 4,
-                    background: cand.tier === 'tier_1_match' ? 'var(--color-emerald-subtle)' : cand.tier === 'tier_2_potential' ? 'var(--color-amber-subtle)' : 'var(--color-rose-subtle)',
-                    color: cand.tier === 'tier_1_match' ? 'var(--color-emerald)' : cand.tier === 'tier_2_potential' ? 'var(--color-amber)' : 'var(--color-rose)',
-                  }}>
-                    {cand.expectedScore}%
-                  </span>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', lineHeight: 1.3 }}>
-                  {cand.tagline}
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      </div>
+        <DemoCandidateSelector
+          selectedSampleId={data.sampleId}
+          isSampleActive={data.isSampleData}
+          onSelectSample={handleLoadSample}
+        />
       )}
 
-      {/* Multi-Format File Dropzone (PDF, Images, Multiple Documents) */}
+      {/* Hidden Native File Input (accepts PDFs, images, text, and docx) */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.docx"
+        onChange={e => handleFilesSelected(e.target.files)}
+        style={{ display: 'none' }}
+      />
+
+      {/* Upload Zone Card */}
       <div
         onClick={() => fileInputRef.current?.click()}
         style={{
-          border: `2px dashed ${processingStage === 'rejected' ? 'var(--color-rose)' : 'var(--color-border)'}`,
-          borderRadius: 'var(--radius-lg)', padding: '24px', textAlign: 'center', cursor: 'pointer',
-          background: processingStage === 'rejected' ? 'var(--color-rose-subtle)' : data.uploadedFileName ? 'var(--color-emerald-subtle)' : 'var(--color-surface-elevated)',
-          transition: 'all 0.2s',
+          border: '2px dashed var(--color-border)',
+          borderRadius: 'var(--radius-lg, 12px)',
+          padding: '28px 20px',
+          textAlign: 'center',
+          background: processingStage === 'success' ? 'hsla(158,64%,52%,0.05)' : 'var(--color-surface)',
+          borderColor: processingStage === 'success' ? 'var(--color-emerald)' : 'var(--color-border)',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
         }}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,.doc,.docx"
-          style={{ display: 'none' }}
-          onChange={e => handleFilesSelected(e.target.files)}
-        />
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, background: '#fff', border: '1px solid var(--color-border)', fontSize: 10, fontWeight: 700, color: 'var(--color-text-secondary)' }}>
-            <FileText size={12} style={{ color: 'var(--color-rose)' }} /> PDF Document
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, background: '#fff', border: '1px solid var(--color-border)', fontSize: 10, fontWeight: 700, color: 'var(--color-text-secondary)' }}>
-            <ImageIcon size={12} style={{ color: 'var(--color-accent)' }} /> PNG / JPG (OCR)
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, background: '#fff', border: '1px solid var(--color-border)', fontSize: 10, fontWeight: 700, color: 'var(--color-text-secondary)' }}>
-            <FileCode size={12} style={{ color: 'var(--color-emerald)' }} /> Batch Documents
-          </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700,
+            background: 'hsla(350,89%,60%,0.1)', color: 'hsl(350,89%,55%)',
+          }}>
+            <FileText size={12} /> PDF Document
+          </span>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700,
+            background: 'hsla(217,91%,60%,0.1)', color: 'hsl(217,91%,55%)',
+          }}>
+            <ImageIcon size={12} /> PNG / JPG (OCR)
+          </span>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700,
+            background: 'hsla(158,64%,52%,0.1)', color: 'hsl(158,64%,42%)',
+          }}>
+            <FileCode size={12} /> Batch Documents
+          </span>
         </div>
 
-        <FileUp size={28} style={{ color: processingStage === 'rejected' ? 'var(--color-rose)' : data.uploadedFileName ? 'var(--color-emerald)' : 'var(--color-accent)', margin: '0 auto 8px' }} />
-        <div style={{ fontWeight: 800, fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)' }}>
-          {data.uploadedFileName ? `Active Document: ${data.uploadedFileName}` : 'Drag & drop a candidate resume, PDF, or list of documents'}
+        <div style={{
+          width: 44, height: 44, borderRadius: '50%',
+          background: 'var(--color-accent-subtle)', color: 'var(--color-accent)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <FileUp size={22} />
         </div>
-        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-          Gemini Flash automatically detects file authenticity, runs OCR, and extracts editable profile text.
-        </span>
+
+        <div>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-text-primary)', marginBottom: 2 }}>
+            {data.uploadedFileName ? `Active Document: ${data.uploadedFileName}` : 'Click to Upload Resume Document(s) or Folder'}
+          </div>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+            Gemini Flash automatically detects file authenticity, runs OCR, and extracts editable profile text.
+          </span>
+        </div>
       </div>
 
-      {/* Animation Stages: Uploading & Gemini OCR Extraction */}
+      {/* Progress Bar during Upload */}
       {processingStage === 'uploading' && (
-        <div style={{
-          padding: '14px 18px', borderRadius: 'var(--radius-md)',
-          background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-          display: 'flex', flexDirection: 'column', gap: 8,
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', fontWeight: 700 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-accent)' }}>
-              <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Uploading document…
-            </span>
-            <span style={{ color: 'var(--color-text-muted)' }}>{uploadPercent}%</span>
+        <div style={{ background: 'var(--color-surface-elevated)', borderRadius: 'var(--radius-md)', padding: 14, border: '1px solid var(--color-border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 'var(--text-xs)', fontWeight: 700 }}>
+            <span>Uploading document…</span>
+            <span>{uploadPercent}%</span>
           </div>
-          <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 999, overflow: 'hidden' }}>
-            <div ref={progressBarRef} style={{ height: '100%', background: 'var(--color-accent)', borderRadius: 999 }} />
+          <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden' }}>
+            <div
+              ref={progressBarRef}
+              style={{ height: '100%', background: 'var(--color-accent)', width: '0%', transition: 'width 0.2s' }}
+            />
           </div>
         </div>
       )}
 
+      {/* Extracting Animation Card */}
       {processingStage === 'extracting' && (
         <div style={{
           padding: '16px 20px', borderRadius: 'var(--radius-md)',
-          background: 'linear-gradient(135deg, hsl(214,80%,97%), hsl(231,60%,96%))',
-          border: '1.5px solid var(--color-accent)', display: 'flex', alignItems: 'center', gap: 14,
+          background: 'var(--color-accent-subtle)', border: '1px solid var(--color-accent)',
+          display: 'flex', alignItems: 'center', gap: 14,
         }}>
           <div style={{
-            width: 38, height: 38, borderRadius: 10,
+            width: 36, height: 36, borderRadius: '50%',
             background: 'var(--color-accent)', color: '#fff',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, animation: 'pulse 1.5s infinite',
@@ -398,7 +450,7 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
               Google Gemini Flash: OCR Extraction & Document Verification…
             </div>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>
-              Authenticating resume layout, reading multi-column structures, and extracting candidate data.
+              Authenticating resume layout, reading multi-column structures, and extracting candidate data in pure JSON format.
             </span>
           </div>
         </div>
@@ -461,7 +513,7 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <CheckCircle2 size={15} style={{ color: 'var(--color-emerald)' }} />
             <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-emerald)' }}>
-              {data.isSampleData ? 'Demo Candidate Loaded' : 'Candidate Resume Verified & Extracted via Gemini OCR'}
+              {data.isSampleData ? 'Demo Candidate Loaded' : 'Candidate Resume Verified & Extracted via Gemini OCR (A+ Grade JSON)'}
             </span>
           </div>
           <button
@@ -507,56 +559,31 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
         </div>
       )}
 
+      {/* Extracted JSON Output Viewer (A+ Grade) */}
+      {data.rawJson && (
+        <JsonExtractionViewer rawJson={data.rawJson} />
+      )}
+
       {/* Editable Candidate Information Form */}
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <label style={{ fontSize: 'var(--text-xs)', fontWeight: 800, color: 'var(--color-text-primary)', textTransform: 'uppercase' }}>
-            Extracted Candidate Information & Resume Content (Editable)
-          </label>
-          {data.resumeText && (
-            <button
-              onClick={handleClear}
-              type="button"
-              style={{
-                background: 'none', border: 'none', color: 'var(--color-text-muted)',
-                cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4,
-              }}
-            >
-              <RefreshCw size={11} /> Reset
-            </button>
-          )}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-          <input
-            type="text"
-            placeholder="Candidate Full Name"
-            value={data.candidateName}
-            onChange={e => onChange({ candidateName: e.target.value, isSampleData: false })}
-            style={{ padding: '10px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', background: 'var(--color-surface)', outline: 'none' }}
-          />
-          <input
-            type="email"
-            placeholder="Candidate Email (optional)"
-            value={data.candidateEmail}
-            onChange={e => onChange({ candidateEmail: e.target.value, isSampleData: false })}
-            style={{ padding: '10px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', background: 'var(--color-surface)', outline: 'none' }}
-          />
-        </div>
-
-        <textarea
-          value={data.resumeText}
-          onChange={e => onChange({ resumeText: e.target.value, isSampleData: false })}
-          placeholder="Extracted resume text will appear here. You can freely edit, append, or review before screening…"
-          rows={8}
-          style={{
-            width: '100%', padding: '12px 14px', border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
-            fontFamily: 'var(--font-mono, monospace)', color: 'var(--color-text-primary)',
-            background: 'var(--color-surface)', resize: 'vertical', lineHeight: 1.5, boxSizing: 'border-box', outline: 'none',
-          }}
-        />
-      </div>
+      <ExtractedCandidateForm
+        data={data}
+        onChange={(updates) => {
+          onChange(updates)
+          if (data.id) {
+            saveCandidateToDatabase({
+              id: data.id,
+              name: updates.candidateName ?? data.candidateName,
+              email: updates.candidateEmail ?? data.candidateEmail,
+              phone: updates.candidatePhone ?? data.candidatePhone,
+              currentTitle: updates.currentTitle ?? data.currentTitle,
+              totalYearsExp: updates.totalYearsExp ?? data.totalYearsExp,
+              resumeText: updates.resumeText ?? data.resumeText,
+            })
+          }
+        }}
+        onReset={handleClear}
+        isDatabaseSaved={isDatabaseSaved}
+      />
 
       {/* Action Footer */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>

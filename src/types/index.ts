@@ -120,10 +120,24 @@ export interface ResumeExtractionResult {
   candidate_name?: string
   email?: string
   phone?: string
+  location?: string
   current_title?: string
   total_years_exp?: number
   skills?: string[]
+  summary?: string
+  experience?: Array<{
+    company: string
+    role: string
+    duration: string
+    highlights: string[]
+  }>
+  education?: Array<{
+    institution: string
+    degree: string
+    year: string
+  }>
   formatted_resume_text?: string
+  raw_json?: Record<string, any>
 }
 
 export interface JobCriteriaValidationResult {
