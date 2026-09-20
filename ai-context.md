@@ -10,7 +10,9 @@
 - **Styling:** Tailwind CSS + Lucide Icons + Custom Glassmorphic Dark/Light Modern UI
 - **AI Processing:** Dual Mode:
   1. Built-in Deterministic & Preloaded Intelligence Engine (instant offline zero-latency demo for judges)
-  2. Live Gemini 2.5 Flash / OpenAI API Client (for real-time resume parsing & dynamic extraction)
+  2. Live Google Gemini API:
+     - **Main Model:** `gemini-3.8-flash` (primary for structured extraction, matching & dynamic interview follow-ups)
+     - **Fallback Model:** `gemini-3.6-flash` (failover fallback)
 - **Document Ingestion:** Client-side PDF text extraction & structured JD requirement parsing
 - **Data Persistence:** LocalStorage + In-Memory State for fast live interaction during hackathon presentations
 

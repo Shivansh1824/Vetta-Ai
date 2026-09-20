@@ -17,17 +17,19 @@
          v                                                                 v
 +--------------------------+                                 +--------------------------+
 |      INGESTION LAYER     |                                 |   INTELLIGENCE ENGINE    |
-| - Job Description (JD)   |                                 | - Dual-Mode Engine:      |
-| - Resumes (PDF / Text)   |                                 |   * Built-in Deterministic|
-| - Client-side Text Parser|                                 |   * Live Gemini / OpenAI |
-+--------------------------+                                 +--------------------------+
+| - Job Description (JD)   |                                 | - Powered by Gemini API: |
+| - Resumes (PDF / Text)   |                                 |   * Main: Gemini 3.8 Flash|
+| - Client-side Text Parser|                                 |   * Fallback: Gemini 3.6 |
++--------------------------+                                 |     Flash                |
+                                                             |   * Built-in Offline Fallback|
+                                                             +--------------------------+
          |                                                                 |
          +--------------------------------+--------------------------------+
                                           |
                                           v
 +-----------------------------------------------------------------------------------+
 |                              CORE PROCESSING PIPELINE                             |
-|  1. Skill & Experience Extraction                                                 |
+|  1. Skill & Experience Extraction (Gemini Structured Outputs)                     |
 |  2. Requirement Mapping (Must-Have vs. Nice-to-Have)                              |
 |  3. Inconsistency & Validation Flag Detection                                     |
 |  4. Candidate Tier Clustering (Tier 1: Match | Tier 2: Review | Tier 3: Gap)       |
@@ -59,9 +61,9 @@
 
 | Layer | Technology | Rationale |
 | :--- | :--- | :--- |
+| **AI Engine** | **Google Gemini API**<br>• **Main Model:** `gemini-3.8-flash`<br>• **Fallback Model:** `gemini-3.6-flash` | High-speed structured JSON extraction, deep reasoning for candidate-to-JD mapping, dynamic interview follow-up generation, and conversational search. Features automatic model fallback (3.8 → 3.6) plus built-in zero-latency offline demo mode. |
 | **Frontend Framework** | **Vite + React (TypeScript)** | Extremely fast development cycle, zero bundle bloat, robust type safety. |
 | **Styling & Design** | **Tailwind CSS + Lucide Icons** | Modern, responsive dark-mode UI with glassmorphism and clear visual hierarchy. |
-| **AI Intelligence** | **Dual Mode (Offline + Live LLM)** | • **Offline Engine:** Instant zero-latency hackathon demo with zero risk of API limits.<br>• **Live LLM:** Gemini 2.5 Flash / OpenAI for dynamic live document analysis. |
 | **Document Processing** | **Client-side PDF & Text Parser** | Extracts raw text directly in browser without requiring external storage backends. |
 | **State Management** | **React State + LocalStorage** | Maintains session persistence across candidate profiles, notes, and evaluations. |
 
