@@ -3,10 +3,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { corsHeaders } from "../_shared/cors.ts"
 
 // We map the user's requested 3.x names to actual Google endpoints
-const MODEL_MAPPING = {
-  'gemini-3.5-flash': 'gemini-1.5-flash',
-  'gemini-3.6-flash': 'gemini-1.5-pro'
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -17,8 +13,8 @@ serve(async (req) => {
     const { resumeText, job } = await req.json()
 
     // Step 2: Use secondary API key for this function (Key 2) to prevent rate limits
-    let apiKey = Deno.env.get('GEMINI_API_KEY_2')
-    let fallbackKey = Deno.env.get('GEMINI_API_KEY_1')
+    let apiKey = Deno.env.get('GEMINI_API_KEY_2') || Deno.env.get('VITE_GEMINI_API_KEY_2')
+    let fallbackKey = Deno.env.get('GEMINI_API_KEY_1') || Deno.env.get('VITE_GEMINI_API_KEY_1')
 
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY_2 is not set")
@@ -75,13 +71,13 @@ JSON SCHEMA:
 }`
 
     const parts = [{ text: prompt }]
-    const models = ['gemini-3.5-flash', 'gemini-3.6-flash']
+    const models = ['gemini-3.8-flash', 'gemini-3.6-flash']
 
     let resultRaw = ''
     let success = false
 
     for (const requestedModel of models) {
-      const actualModel = MODEL_MAPPING[requestedModel as keyof typeof MODEL_MAPPING]
+      const actualModel = requestedModel
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${actualModel}:generateContent?key=${apiKey}`
 
       try {
@@ -114,7 +110,7 @@ JSON SCHEMA:
 
     if (!success && fallbackKey) {
       console.log("Trying fallback key...")
-      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_MAPPING['gemini-3.5-flash']}:generateContent?key=${fallbackKey}`
+      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${'gemini-3.8-flash'}:generateContent?key=${fallbackKey}`
       const res = await fetch(fallbackUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

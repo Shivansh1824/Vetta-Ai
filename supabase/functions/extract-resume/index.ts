@@ -3,10 +3,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { corsHeaders } from "../_shared/cors.ts"
 
 // We map the user's requested 3.x names to actual Google endpoints
-const MODEL_MAPPING = {
-  'gemini-3.5-flash': 'gemini-1.5-flash',
-  'gemini-3.6-flash': 'gemini-1.5-pro'
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -17,8 +13,8 @@ serve(async (req) => {
     const { text, base64, mimeType, fileName } = await req.json()
 
     // Step 1: Use primary API key for this function (Key 1)
-    let apiKey = Deno.env.get('GEMINI_API_KEY_1')
-    let fallbackKey = Deno.env.get('GEMINI_API_KEY_2')
+    let apiKey = Deno.env.get('GEMINI_API_KEY_1') || Deno.env.get('VITE_GEMINI_API_KEY_1')
+    let fallbackKey = Deno.env.get('GEMINI_API_KEY_2') || Deno.env.get('VITE_GEMINI_API_KEY_2')
 
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY_1 is not set")
@@ -76,13 +72,13 @@ Return ONLY valid JSON matching this schema:
     const contentPrompt = text ? `${prompt}\n\nDOCUMENT TEXT CONTENT:\n${text.substring(0, 12000)}` : prompt
     parts.push({ text: contentPrompt })
 
-    const models = ['gemini-3.5-flash', 'gemini-3.6-flash']
+    const models = ['gemini-3.8-flash', 'gemini-3.6-flash']
 
     let resultRaw = ''
     let success = false
 
     for (const requestedModel of models) {
-      const actualModel = MODEL_MAPPING[requestedModel as keyof typeof MODEL_MAPPING]
+      const actualModel = requestedModel
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${actualModel}:generateContent?key=${apiKey}`
 
       try {
@@ -115,7 +111,7 @@ Return ONLY valid JSON matching this schema:
 
     if (!success && fallbackKey) {
       console.log("Trying fallback key...")
-      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_MAPPING['gemini-3.5-flash']}:generateContent?key=${fallbackKey}`
+      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${'gemini-3.8-flash'}:generateContent?key=${fallbackKey}`
       const res = await fetch(fallbackUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
