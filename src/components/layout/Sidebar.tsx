@@ -5,6 +5,7 @@ import {
   ChevronLeft, ChevronRight, Menu, X, Sparkles,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { SAMPLE_CANDIDATES } from '../../data/sampleCandidates'
 
 export type NavItem =
   | 'onboarding'
@@ -17,14 +18,14 @@ export type NavItem =
   | 'settings'
 
 const NAV_ITEMS: { id: NavItem; label: string; icon: React.ReactNode; badge?: string }[] = [
-  { id: 'onboarding', label: 'Onboarding Intake', icon: <Sparkles size={17} />, badge: 'Flow' },
-  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={17} /> },
-  { id: 'jobs', label: 'Job Posts', icon: <Briefcase size={17} /> },
-  { id: 'candidates', label: 'Candidates', icon: <Users size={17} /> },
-  { id: 'screening', label: 'AI Screening', icon: <ShieldCheck size={17} />, badge: 'AI' },
-  { id: 'interview', label: 'Interview Cockpit', icon: <MessageSquare size={17} />, badge: 'AI' },
-  { id: 'reports', label: 'Reports', icon: <FileText size={17} /> },
-  { id: 'settings', label: 'Settings', icon: <Settings size={17} /> },
+  { id: 'onboarding', label: 'Onboarding Intake', icon: <Sparkles size={16} />, badge: 'Flow' },
+  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
+  { id: 'jobs', label: 'Job Posts', icon: <Briefcase size={16} /> },
+  { id: 'candidates', label: 'Candidates', icon: <Users size={16} /> },
+  { id: 'screening', label: 'AI Screening', icon: <ShieldCheck size={16} />, badge: 'AI' },
+  { id: 'interview', label: 'Interview Cockpit', icon: <MessageSquare size={16} />, badge: 'AI' },
+  { id: 'reports', label: 'Reports', icon: <FileText size={16} /> },
+  { id: 'settings', label: 'Settings', icon: <Settings size={16} /> },
 ]
 
 interface SidebarProps {
@@ -46,35 +47,43 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
     }}>
       {/* Logo */}
       <div style={{
-        padding: collapsed ? '20px 0' : '20px 18px',
+        padding: collapsed ? '16px 0' : '16px 14px',
         borderBottom: '1px solid var(--color-border)',
         display: 'flex', alignItems: 'center',
         justifyContent: collapsed ? 'center' : 'space-between',
-        gap: 10,
+        gap: 8, flexShrink: 0,
       }}>
         {!collapsed && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{
-              width: 30, height: 30, borderRadius: 8,
-              background: 'linear-gradient(135deg, hsl(231,76%,52%), hsl(198,76%,46%))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <span style={{ color: '#fff', fontWeight: 900, fontSize: 14 }}>V</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <img
+              src="/vetta-logo.png"
+              alt="Vetta AI"
+              style={{
+                width: 30, height: 30, borderRadius: 8,
+                objectFit: 'contain',
+                boxShadow: '0 2px 8px hsla(231,76%,52%,0.25)',
+              }}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontWeight: 900, fontSize: 15, color: 'var(--color-text-primary)', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+                Vetta AI
+              </span>
+              <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Intelligence
+              </span>
             </div>
-            <span style={{ fontWeight: 900, fontSize: 15, color: 'var(--color-text-primary)', letterSpacing: '-0.03em' }}>
-              Vetta AI
-            </span>
           </div>
         )}
         {collapsed && (
-          <div style={{
-            width: 30, height: 30, borderRadius: 8,
-            background: 'linear-gradient(135deg, hsl(231,76%,52%), hsl(198,76%,46%))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <span style={{ color: '#fff', fontWeight: 900, fontSize: 14 }}>V</span>
-          </div>
+          <img
+            src="/vetta-logo.png"
+            alt="Vetta AI"
+            style={{
+              width: 28, height: 28, borderRadius: 8,
+              objectFit: 'contain',
+              boxShadow: '0 2px 8px hsla(231,76%,52%,0.25)',
+            }}
+          />
         )}
         <button
           onClick={() => setCollapsed(c => !c)}
@@ -91,7 +100,7 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
       </div>
 
       {/* Nav links */}
-      <div style={{ flex: 1, padding: '10px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
         {NAV_ITEMS.map(item => {
           const isActive = active === item.id
           return (
@@ -101,16 +110,16 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
               title={collapsed ? item.label : undefined}
               style={{
                 display: 'flex', alignItems: 'center',
-                gap: collapsed ? 0 : 10,
+                gap: collapsed ? 0 : 9,
                 justifyContent: collapsed ? 'center' : 'flex-start',
-                padding: collapsed ? '10px' : '9px 12px',
+                padding: collapsed ? '8px' : '7px 10px',
                 borderRadius: 'var(--radius-md)',
                 border: 'none', cursor: 'pointer', width: '100%',
                 textAlign: 'left',
                 background: isActive ? 'var(--color-accent-subtle)' : 'transparent',
                 color: isActive ? 'var(--color-accent)' : 'var(--color-text-secondary)',
                 fontWeight: isActive ? 700 : 500,
-                fontSize: 'var(--text-sm)',
+                fontSize: 'var(--text-xs)',
                 transition: 'all 0.15s',
                 position: 'relative',
               }}
@@ -144,22 +153,22 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
         })}
       </div>
 
-      {/* User + signout */}
-      <div style={{ padding: '10px', borderTop: '1px solid var(--color-border)' }}>
+      {/* User + signout + demo data (Pinned to bottom, never sliding offscreen) */}
+      <div style={{ padding: '10px', borderTop: '1px solid var(--color-border)', flexShrink: 0, marginTop: 'auto' }}>
         {!collapsed && (
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '9px 10px',
+            display: 'flex', alignItems: 'center', gap: 9,
+            padding: '8px 10px',
             background: 'var(--color-surface-elevated)',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--color-border)',
-            marginBottom: 6,
+            marginBottom: 8,
           }}>
             <div style={{
-              width: 28, height: 28, borderRadius: '50%',
+              width: 26, height: 26, borderRadius: '50%',
               background: 'linear-gradient(135deg, hsl(231,76%,52%), hsl(198,76%,46%))',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0,
+              fontSize: 10, fontWeight: 800, color: '#fff', flexShrink: 0,
             }}>
               {initials}
             </div>
@@ -167,34 +176,64 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
               <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {user?.email ?? 'Recruiter'}
               </div>
-              <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>Recruiter</div>
+              <div style={{ fontSize: 9, color: 'var(--color-emerald)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--color-emerald)' }} />
+                Demo Account
+              </div>
             </div>
           </div>
         )}
-        <button
-          onClick={signOut}
-          title={collapsed ? 'Sign out' : undefined}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center',
-            gap: collapsed ? 0 : 8, justifyContent: collapsed ? 'center' : 'flex-start',
-            padding: '9px 10px',
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--color-text-muted)',
-            fontSize: 'var(--text-sm)', borderRadius: 'var(--radius-md)',
-            transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = 'var(--color-rose-subtle)'
-            e.currentTarget.style.color = 'var(--color-rose)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = 'none'
-            e.currentTarget.style.color = 'var(--color-text-muted)'
-          }}
-        >
-          <LogOut size={16} />
-          {!collapsed && <span>Sign out</span>}
-        </button>
+
+        {/* Demo Data & Sign Out buttons together on one screen */}
+        <div style={{ display: 'flex', gap: 6, flexDirection: collapsed ? 'column' : 'row' }}>
+          <button
+            onClick={() => {
+              onNavigate('screening')
+              window.dispatchEvent(new CustomEvent('vetta:load-sample-candidate', { detail: SAMPLE_CANDIDATES[0] }))
+            }}
+            title="Load Demo Candidate Data"
+            style={{
+              flex: 1, display: 'flex', alignItems: 'center',
+              gap: collapsed ? 0 : 5, justifyContent: 'center',
+              padding: '7px 8px',
+              background: 'var(--color-accent-subtle)',
+              border: '1px solid hsla(231,76%,52%,0.25)',
+              color: 'var(--color-accent)', cursor: 'pointer',
+              fontSize: 11, fontWeight: 800, borderRadius: 'var(--radius-md)',
+              transition: 'all 0.15s',
+            }}
+          >
+            <Sparkles size={12} />
+            {!collapsed && <span>Demo Data</span>}
+          </button>
+
+          <button
+            onClick={signOut}
+            title={collapsed ? 'Sign out' : undefined}
+            style={{
+              display: 'flex', alignItems: 'center',
+              gap: collapsed ? 0 : 5, justifyContent: 'center',
+              padding: '7px 10px',
+              background: 'none', border: '1px solid var(--color-border)', cursor: 'pointer',
+              color: 'var(--color-text-muted)',
+              fontSize: 11, fontWeight: 700, borderRadius: 'var(--radius-md)',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'var(--color-rose-subtle)'
+              e.currentTarget.style.color = 'var(--color-rose)'
+              e.currentTarget.style.borderColor = 'var(--color-rose)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'none'
+              e.currentTarget.style.color = 'var(--color-text-muted)'
+              e.currentTarget.style.borderColor = 'var(--color-border)'
+            }}
+          >
+            <LogOut size={12} />
+            {!collapsed && <span>Sign out</span>}
+          </button>
+        </div>
       </div>
     </nav>
   )

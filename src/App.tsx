@@ -12,14 +12,16 @@ function App() {
         height: '100vh', background: 'var(--color-bg)',
         flexDirection: 'column', gap: 12,
       }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 10,
-          background: 'linear-gradient(135deg, hsl(231,76%,52%), hsl(198,76%,46%))',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          animation: 'pulse 1.5s infinite',
-        }}>
-          <span style={{ color: '#fff', fontWeight: 900, fontSize: 16 }}>V</span>
-        </div>
+        <img
+          src="/vetta-logo.png"
+          alt="Vetta AI"
+          style={{
+            width: 44, height: 44, borderRadius: 12,
+            objectFit: 'contain',
+            boxShadow: '0 4px 16px hsla(231,76%,52%,0.25)',
+            animation: 'pulse 1.5s infinite',
+          }}
+        />
         <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
           Loading Vetta AI…
         </p>

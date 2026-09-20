@@ -105,16 +105,18 @@ export function LoginPage() {
           {/* Logo + title */}
           <div className="auth-form-item" style={{ marginBottom: 36 }}>
             <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
+              display: 'inline-flex', alignItems: 'center', gap: 10,
               marginBottom: 20,
             }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: 'linear-gradient(135deg, hsl(231,76%,52%), hsl(198,76%,46%))',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <span style={{ color: '#fff', fontWeight: 900, fontSize: 16 }}>V</span>
-              </div>
+              <img
+                src="/vetta-logo.png"
+                alt="Vetta AI"
+                style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  objectFit: 'contain',
+                  boxShadow: '0 2px 10px hsla(231,76%,52%,0.25)',
+                }}
+              />
               <span style={{ fontWeight: 900, fontSize: 18, color: 'var(--color-text-primary)', letterSpacing: '-0.03em' }}>
                 Vetta AI
               </span>
