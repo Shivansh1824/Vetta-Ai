@@ -154,7 +154,8 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
               fileName: primaryFile.name,
             })
             applyExtractionResult(result, primaryFile.name, formatType)
-          } catch {
+          } catch (err) {
+            console.error("EDGE FUNCTION EXTRACT-RESUME FAILED (Image/PDF):", err)
             // Offline fallback
             const fallback = buildOfflineExtractionResult(primaryFile.name, primaryFile.name)
             applyExtractionResult(fallback, primaryFile.name, formatType)
@@ -171,7 +172,8 @@ export function CandidateUploadStep({ data, onChange, onPrev, onRunScreening }: 
               fileName: primaryFile.name,
             })
             applyExtractionResult(result, primaryFile.name, formatType)
-          } catch {
+          } catch (err) {
+            console.error("EDGE FUNCTION EXTRACT-RESUME FAILED (Text):", err)
             const fallback = buildOfflineExtractionResult(textContent, primaryFile.name)
             applyExtractionResult(fallback, primaryFile.name, formatType)
           }
