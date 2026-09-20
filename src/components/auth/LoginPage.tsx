@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
-import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, Sparkles } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { AuthShowcase } from './AuthShowcase'
 
@@ -150,6 +150,37 @@ export function LoginPage() {
               </span>
             </div>
           )}
+
+          {/* Hackathon Demo Access Quick Fill */}
+          <div className="auth-form-item" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 12px', borderRadius: 'var(--radius-md)',
+            background: 'var(--color-accent-subtle)', border: '1px solid hsla(231,76%,52%,0.25)',
+            marginBottom: 16,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Sparkles size={13} style={{ color: 'var(--color-accent)' }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-secondary)' }}>
+                Hackathon Access: <strong>demo.recruiter@vetta.ai</strong>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('demo.recruiter@vetta.ai')
+                setPassword('VettaDemo2026!')
+                setError(null)
+              }}
+              style={{
+                background: '#fff', border: '1px solid var(--color-accent)',
+                color: 'var(--color-accent)', borderRadius: 6,
+                padding: '3px 9px', fontSize: 11, fontWeight: 800,
+                cursor: 'pointer',
+              }}
+            >
+              Auto-Fill
+            </button>
+          </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
