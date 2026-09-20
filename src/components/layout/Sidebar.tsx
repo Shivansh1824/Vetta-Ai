@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import {
   LayoutDashboard, Briefcase, Users, ShieldCheck,
-  MessageSquare, FileText, Settings, LogOut,
+  MessageSquare, FileText, Settings,
   ChevronLeft, ChevronRight, Menu, X, Sparkles,
 } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
-import { SAMPLE_CANDIDATES } from '../../data/sampleCandidates'
 
 export type NavItem =
   | 'onboarding'
@@ -34,11 +32,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ active, onNavigate }: SidebarProps) {
-  const { user, signOut } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-
-  const initials = user?.email?.slice(0, 2).toUpperCase() ?? 'RU'
 
   const SidebarContent = () => (
     <nav style={{
@@ -151,89 +146,6 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
             </button>
           )
         })}
-      </div>
-
-      {/* User + signout + demo data (Pinned to bottom, never sliding offscreen) */}
-      <div style={{ padding: '10px', borderTop: '1px solid var(--color-border)', flexShrink: 0, marginTop: 'auto' }}>
-        {!collapsed && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 9,
-            padding: '8px 10px',
-            background: 'var(--color-surface-elevated)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-border)',
-            marginBottom: 8,
-          }}>
-            <div style={{
-              width: 26, height: 26, borderRadius: '50%',
-              background: 'linear-gradient(135deg, hsl(231,76%,52%), hsl(198,76%,46%))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 10, fontWeight: 800, color: '#fff', flexShrink: 0,
-            }}>
-              {initials}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.email ?? 'Recruiter'}
-              </div>
-              <div style={{ fontSize: 9, color: 'var(--color-emerald)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--color-emerald)' }} />
-                Demo Account
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Demo Data & Sign Out buttons together on one screen */}
-        <div style={{ display: 'flex', gap: 6, flexDirection: collapsed ? 'column' : 'row' }}>
-          <button
-            onClick={() => {
-              onNavigate('screening')
-              window.dispatchEvent(new CustomEvent('vetta:load-sample-candidate', { detail: SAMPLE_CANDIDATES[0] }))
-            }}
-            title="Load Demo Candidate Data"
-            style={{
-              flex: 1, display: 'flex', alignItems: 'center',
-              gap: collapsed ? 0 : 5, justifyContent: 'center',
-              padding: '7px 8px',
-              background: 'var(--color-accent-subtle)',
-              border: '1px solid hsla(231,76%,52%,0.25)',
-              color: 'var(--color-accent)', cursor: 'pointer',
-              fontSize: 11, fontWeight: 800, borderRadius: 'var(--radius-md)',
-              transition: 'all 0.15s',
-            }}
-          >
-            <Sparkles size={12} />
-            {!collapsed && <span>Demo Data</span>}
-          </button>
-
-          <button
-            onClick={signOut}
-            title={collapsed ? 'Sign out' : undefined}
-            style={{
-              display: 'flex', alignItems: 'center',
-              gap: collapsed ? 0 : 5, justifyContent: 'center',
-              padding: '7px 10px',
-              background: 'none', border: '1px solid var(--color-border)', cursor: 'pointer',
-              color: 'var(--color-text-muted)',
-              fontSize: 11, fontWeight: 700, borderRadius: 'var(--radius-md)',
-              transition: 'all 0.15s',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'var(--color-rose-subtle)'
-              e.currentTarget.style.color = 'var(--color-rose)'
-              e.currentTarget.style.borderColor = 'var(--color-rose)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'none'
-              e.currentTarget.style.color = 'var(--color-text-muted)'
-              e.currentTarget.style.borderColor = 'var(--color-border)'
-            }}
-          >
-            <LogOut size={12} />
-            {!collapsed && <span>Sign out</span>}
-          </button>
-        </div>
       </div>
     </nav>
   )

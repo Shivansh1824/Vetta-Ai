@@ -1,7 +1,5 @@
-import { useState } from 'react'
-import { Bell, Search, Sparkles, ChevronDown, LogOut } from 'lucide-react'
+import { Bell, Search, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { SAMPLE_CANDIDATES } from '../../data/sampleCandidates'
 
 interface TopHeaderProps {
   title: string
@@ -10,12 +8,6 @@ interface TopHeaderProps {
 
 export function TopHeader({ title, subtitle }: TopHeaderProps) {
   const { user, signOut } = useAuth()
-  const [demoOpen, setDemoOpen] = useState(false)
-
-  const handleSelectDemo = (cand: (typeof SAMPLE_CANDIDATES)[0]) => {
-    window.dispatchEvent(new CustomEvent('vetta:load-sample-candidate', { detail: cand }))
-    setDemoOpen(false)
-  }
 
   return (
     <header style={{
@@ -41,71 +33,8 @@ export function TopHeader({ title, subtitle }: TopHeaderProps) {
         )}
       </div>
 
-      {/* Right: search + demo data + bell + avatar + signout */}
+      {/* Right: search + bell + avatar + signout */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {/* Quick Demo Data trigger - always accessible on 1 screen */}
-        <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => setDemoOpen(o => !o)}
-            type="button"
-            title="Load Hackathon Demo Candidate Data"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '6px 12px', borderRadius: 'var(--radius-pill)',
-              border: '1px solid hsla(231,76%,52%,0.3)',
-              background: 'var(--color-accent-subtle)',
-              color: 'var(--color-accent)',
-              fontSize: 'var(--text-xs)', fontWeight: 800,
-              cursor: 'pointer', transition: 'all 0.15s',
-            }}
-          >
-            <Sparkles size={13} />
-            <span>Demo Data</span>
-            <ChevronDown size={12} style={{ transform: demoOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-          </button>
-
-          {demoOpen && (
-            <div style={{
-              position: 'absolute', right: 0, top: '100%', marginTop: 6,
-              background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-md)', padding: '6px', width: 230,
-              boxShadow: 'var(--shadow-lg)', zIndex: 100,
-              display: 'flex', flexDirection: 'column', gap: 4,
-            }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--color-text-muted)', padding: '4px 8px', textTransform: 'uppercase' }}>
-                Load Demo Candidate
-              </div>
-              {SAMPLE_CANDIDATES.map(cand => (
-                <button
-                  key={cand.id}
-                  onClick={() => handleSelectDemo(cand)}
-                  type="button"
-                  style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: 'none',
-                    background: 'none', cursor: 'pointer', textAlign: 'left',
-                    fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-primary)',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-elevated)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                >
-                  <div>
-                    <div>{cand.name}</div>
-                    <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 500 }}>{cand.tier.replace(/_/g, ' ')}</div>
-                  </div>
-                  <span style={{
-                    fontSize: 10, fontWeight: 900, padding: '1px 5px', borderRadius: 4,
-                    background: cand.tier === 'tier_1_match' ? 'var(--color-emerald-subtle)' : cand.tier === 'tier_2_potential' ? 'var(--color-amber-subtle)' : 'var(--color-rose-subtle)',
-                    color: cand.tier === 'tier_1_match' ? 'var(--color-emerald)' : cand.tier === 'tier_2_potential' ? 'var(--color-amber)' : 'var(--color-rose)',
-                  }}>
-                    {cand.expectedScore}%
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
 
         <div style={{ position: 'relative' }}>
           <Search size={14} style={{
