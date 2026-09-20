@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react'
 import { gsap } from 'gsap'
 import {
   Brain, AlertTriangle, ShieldCheck,
-  ArrowRight, ArrowLeft, LayoutDashboard, MessageSquare
+  ArrowRight, ArrowLeft, LayoutDashboard, MessageSquare, Sparkles
 } from 'lucide-react'
 import type { GeminiScreeningResult, Tier, RequirementStatus, FlagSeverity } from '../../../types'
 
@@ -186,6 +186,40 @@ export function ScreeningResultsStep({
               </div>
             )
           })()}
+
+          {/* Key Strengths & Standout Qualifications (Positive A+ Highlights) */}
+          {result.strengths && result.strengths.length > 0 && (
+            <div style={{
+              background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-xl)', padding: '18px 22px',
+              boxShadow: 'var(--shadow-xs)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <div style={{
+                  width: 26, height: 26, borderRadius: 8,
+                  background: 'var(--color-emerald-subtle)', color: 'var(--color-emerald)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Sparkles size={14} />
+                </div>
+                <h4 style={{ margin: 0, fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-text-primary)' }}>
+                  Key Strengths & Standout Qualifications
+                </h4>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {result.strengths.map((str, idx) => (
+                  <div key={idx} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 8,
+                    fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)',
+                    lineHeight: 1.5,
+                  }}>
+                    <span style={{ color: 'var(--color-emerald)', fontWeight: 900, marginTop: 1 }}>✓</span>
+                    <span>{str}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Requirements Mapping */}
           <div style={{

@@ -325,6 +325,30 @@ export function ScreeningPage() {
                 </div>
               </div>
 
+              {/* Standout Positive Strengths */}
+              {result.strengths && result.strengths.length > 0 && (
+                <div style={{
+                  background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-lg)', padding: '12px 16px', boxShadow: 'var(--shadow-xs)',
+                  flexShrink: 0,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <Sparkles size={14} style={{ color: 'var(--color-emerald)' }} />
+                    <span style={{ fontWeight: 800, fontSize: 'var(--text-xs)', color: 'var(--color-text-primary)' }}>
+                      Standout Qualifications & Strengths
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {result.strengths.map((s, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
+                        <span style={{ color: 'var(--color-emerald)', fontWeight: 800 }}>✓</span>
+                        <span>{s}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Requirements accordion */}
               <div style={{
                 background: 'var(--color-surface)', border: '1px solid var(--color-border)',

@@ -106,6 +106,7 @@ export interface GeminiScreeningResult {
   match_score: number
   tier: Tier
   summary: string
+  strengths?: string[]
   requirements: { requirement_text: string; status: RequirementStatus; evidence_quote: string }[]
   flags: { flag_type: FlagType; description: string; severity: FlagSeverity; evidence_quote: string }[]
 }

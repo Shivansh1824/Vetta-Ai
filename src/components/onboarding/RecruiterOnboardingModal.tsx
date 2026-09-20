@@ -108,6 +108,8 @@ export function RecruiterOnboardingModal({ isOpen, onClose, onComplete, onGoToIn
           tier: res.tier,
           summary: res.summary,
           resumeText: candidateData.resumeText,
+          requirements: res.requirements,
+          flags: res.flags,
         })
       }
     } catch {

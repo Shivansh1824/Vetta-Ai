@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Candidate, Tier } from '../types'
+import type { Candidate, Tier, RequirementStatus, FlagType, FlagSeverity } from '../types'
 
 export interface SaveCandidateInput {
   id?: string | null
@@ -14,11 +14,14 @@ export interface SaveCandidateInput {
   matchScore?: number
   tier?: Tier
   rawJson?: Record<string, any> | null
+  requirements?: Array<{ requirement_text: string; status: RequirementStatus; evidence_quote: string }>
+  flags?: Array<{ flag_type: FlagType; description: string; severity: FlagSeverity; evidence_quote: string }>
 }
 
 /**
  * Persists an extracted candidate into the Supabase database.
  * If candidate ID exists, updates the record; otherwise, creates a new entry.
+ * Also synchronizes requirement citations and validation flags into relational tables.
  */
 export async function saveCandidateToDatabase(
   input: SaveCandidateInput
@@ -37,6 +40,8 @@ export async function saveCandidateToDatabase(
       job_id: input.jobId || null,
     }
 
+    let savedCandidate: Candidate | null = null
+
     if (input.id) {
       const { data, error } = await supabase
         .from('candidates')
@@ -49,21 +54,50 @@ export async function saveCandidateToDatabase(
         console.warn('Supabase update warning:', error.message)
         return { success: false, error: error.message }
       }
-      return { success: true, candidate: data as Candidate }
+      savedCandidate = data as Candidate
+    } else {
+      const { data, error } = await supabase
+        .from('candidates')
+        .insert(payload)
+        .select('*')
+        .single()
+
+      if (error) {
+        console.warn('Supabase insert warning:', error.message)
+        return { success: false, error: error.message }
+      }
+      savedCandidate = data as Candidate
     }
 
-    const { data, error } = await supabase
-      .from('candidates')
-      .insert(payload)
-      .select('*')
-      .single()
+    const targetCandidateId = input.id || savedCandidate?.id
+    if (targetCandidateId) {
+      if (input.requirements && input.requirements.length > 0) {
+        await supabase.from('candidate_requirements').delete().eq('candidate_id', targetCandidateId)
+        await supabase.from('candidate_requirements').insert(
+          input.requirements.map(r => ({
+            candidate_id: targetCandidateId,
+            requirement_text: r.requirement_text,
+            status: r.status,
+            evidence_quote: r.evidence_quote || null,
+          }))
+        )
+      }
 
-    if (error) {
-      console.warn('Supabase insert warning:', error.message)
-      return { success: false, error: error.message }
+      if (input.flags && input.flags.length > 0) {
+        await supabase.from('validation_flags').delete().eq('candidate_id', targetCandidateId)
+        await supabase.from('validation_flags').insert(
+          input.flags.map(f => ({
+            candidate_id: targetCandidateId,
+            flag_type: f.flag_type,
+            description: f.description,
+            severity: f.severity,
+            evidence_quote: f.evidence_quote || null,
+          }))
+        )
+      }
     }
 
-    return { success: true, candidate: data as Candidate }
+    return { success: true, candidate: savedCandidate }
   } catch (err: any) {
     console.warn('Database error persisting candidate:', err?.message || err)
     return { success: false, error: err?.message || 'Database error' }
