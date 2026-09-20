@@ -26,7 +26,7 @@ Perform an A+ Grade, thorough, objective, and positively-framed evaluation of th
 ROLE: ${job.title}
 MUST-HAVES: ${job.must_haves.join(', ')}
 NICE-TO-HAVES: ${job.nice_to_haves.join(', ')}
-JOB CONTEXT: ${job.description_text.slice(0, 2000)}
+JOB CONTEXT: ${(job.description_text || '').slice(0, 2000)}
 
 CANDIDATE RESUME:
 ${resumeText.slice(0, 4000)}
@@ -71,7 +71,13 @@ JSON SCHEMA:
 }`
 
     const parts = [{ text: prompt }]
-    const models = ['gemini-3.6-flash', 'gemini-3.8-flash']
+    const models = [
+      'gemini-3.8-flash',
+      'gemini-3.6-flash',
+      'gemini-3.7-flash',
+      'gemini-3.5-flash',
+      'gemini-3.5-flash-lite',
+    ]
 
     let resultRaw = ''
     let success = false
@@ -113,26 +119,28 @@ JSON SCHEMA:
 
     if (!success && fallbackKey) {
       console.log("Trying fallback key...")
-      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${fallbackKey}`
-      try {
-        const res = await fetch(fallbackUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 4096, response_mime_type: 'application/json' },
-          }),
-        })
-        if (!res.ok) {
-          const errText = await res.text()
-          throw new Error(`Fallback API Error ${res.status}: ${errText}`)
+      for (const fallbackModel of models) {
+        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${fallbackModel}:generateContent?key=${fallbackKey}`
+        try {
+          const res = await fetch(fallbackUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts }],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 4096, response_mime_type: 'application/json' },
+            }),
+          })
+          if (!res.ok) continue
+          const data = await res.json()
+          const resParts = data.candidates?.[0]?.content?.parts
+          resultRaw = Array.isArray(resParts) ? resParts.find((p: any) => typeof p.text === 'string')?.text : ''
+          if (resultRaw) {
+            success = true
+            break
+          }
+        } catch (err: any) {
+          lastError = err?.message || String(err)
         }
-        const data = await res.json()
-        const resParts = data.candidates?.[0]?.content?.parts
-        resultRaw = Array.isArray(resParts) ? resParts.find((p: any) => typeof p.text === 'string')?.text : ''
-        success = true
-      } catch (err: any) {
-        lastError = err?.message || String(err)
       }
     }
 

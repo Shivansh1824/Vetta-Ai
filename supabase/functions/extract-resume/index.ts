@@ -72,7 +72,13 @@ Return ONLY valid JSON matching this schema:
     const contentPrompt = text ? `${prompt}\n\nDOCUMENT FILENAME: ${fileName || 'Uploaded Document'}\nDOCUMENT TEXT CONTENT:\n${text.substring(0, 12000)}` : prompt
     parts.push({ text: contentPrompt })
 
-    const models = ['gemini-3.6-flash', 'gemini-3.8-flash']
+    const models = [
+      'gemini-3.8-flash',
+      'gemini-3.6-flash',
+      'gemini-3.7-flash',
+      'gemini-3.5-flash',
+      'gemini-3.5-flash-lite',
+    ]
 
     let resultRaw = ''
     let success = false
@@ -111,20 +117,28 @@ Return ONLY valid JSON matching this schema:
 
     if (!success && fallbackKey) {
       console.log("Trying fallback key...")
-      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${fallbackKey}`
-      const res = await fetch(fallbackUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 4096, response_mime_type: 'application/json' },
-        }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        const resParts = data.candidates?.[0]?.content?.parts
-        resultRaw = Array.isArray(resParts) ? resParts.find((p: any) => typeof p.text === 'string')?.text : ''
-        success = true
+      for (const fallbackModel of models) {
+        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${fallbackModel}:generateContent?key=${fallbackKey}`
+        try {
+          const res = await fetch(fallbackUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts }],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 4096, response_mime_type: 'application/json' },
+            }),
+          })
+          if (!res.ok) continue
+          const data = await res.json()
+          const resParts = data.candidates?.[0]?.content?.parts
+          resultRaw = Array.isArray(resParts) ? resParts.find((p: any) => typeof p.text === 'string')?.text : ''
+          if (resultRaw) {
+            success = true
+            break
+          }
+        } catch {
+          // try next model
+        }
       }
     }
 
