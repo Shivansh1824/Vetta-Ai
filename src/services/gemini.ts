@@ -1,9 +1,9 @@
 /**
- * Gemini Service — Two separate functions backed by two API keys.
- *   fn 1 (API Key 1): analyzeResume  — extract, score, map requirements, detect flags
- *   fn 2 (API Key 2): generateInterviewQuestions — tailored question bank
+ * Gemini Service — Dual API Key Resilience Architecture.
+ *   Primary Key: API Key 2 (VITE_GEMINI_API_KEY_2) for AI Candidate Screening, OCR Ingestion & Question Generation.
+ *   Backup Key:  API Key 1 (VITE_GEMINI_API_KEY_1) for seamless automatic quota/failover recovery.
  *
- * Both target gemini-3.8-flash with medium thinking; gemini-3.6-flash as fallback.
+ * Target Models: ['gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest']
  */
 
 import type { GeminiScreeningResult, GeminiInterviewResult, Job, Tier, ResumeExtractionResult, JobCriteriaValidationResult } from '../types'
@@ -25,10 +25,12 @@ async function callGemini(
   apiKey: string,
   prompt: string,
   modelIndex = 0,
-  inlineData?: { mimeType: string; base64: string }
+  inlineData?: { mimeType: string; base64: string },
+  fallbackKey?: string
 ): Promise<string> {
   const model = AVAILABLE_MODELS[modelIndex] || AVAILABLE_MODELS[0]
-  const url = `${BASE_URL}/${model}:generateContent?key=${apiKey}`
+  const activeKey = apiKey || fallbackKey || API_KEY_2 || API_KEY_1
+  const url = `${BASE_URL}/${model}:generateContent?key=${activeKey}`
   const parts: Array<{ text?: string; inline_data?: { mime_type: string; data: string } }> = [{ text: prompt }]
 
   if (inlineData) {
@@ -57,7 +59,10 @@ async function callGemini(
     if (!res.ok) {
       if (modelIndex < AVAILABLE_MODELS.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 350))
-        return callGemini(apiKey, prompt, modelIndex + 1, inlineData)
+        return callGemini(apiKey, prompt, modelIndex + 1, inlineData, fallbackKey)
+      }
+      if (fallbackKey && fallbackKey !== apiKey) {
+        return callGemini(fallbackKey, prompt, 0, inlineData)
       }
       throw new Error(`Gemini API error ${res.status}`)
     }
@@ -67,7 +72,10 @@ async function callGemini(
   } catch (err) {
     if (modelIndex < AVAILABLE_MODELS.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, 350))
-      return callGemini(apiKey, prompt, modelIndex + 1, inlineData)
+      return callGemini(apiKey, prompt, modelIndex + 1, inlineData, fallbackKey)
+    }
+    if (fallbackKey && fallbackKey !== apiKey) {
+      return callGemini(fallbackKey, prompt, 0, inlineData)
     }
     throw err
   }
@@ -129,7 +137,7 @@ Return ONLY valid JSON matching this schema:
   const inline = input.base64 && input.mimeType ? { mimeType: input.mimeType, base64: input.base64 } : undefined
   const contentPrompt = input.text ? `${prompt}\n\nDOCUMENT TEXT CONTENT:\n${input.text.slice(0, 12000)}` : prompt
 
-  const raw = await callGemini(API_KEY_1, contentPrompt, 0, inline)
+  const raw = await callGemini(API_KEY_2, contentPrompt, 0, inline, API_KEY_1)
   const parsed = parseJSON<ResumeExtractionResult>(raw)
   return {
     ...parsed,
@@ -272,7 +280,7 @@ JSON SCHEMA:
   ]
 }`
 
-  const raw = await callGemini(API_KEY_1, prompt)
+  const raw = await callGemini(API_KEY_2, prompt, 0, undefined, API_KEY_1)
   return parseJSON<GeminiScreeningResult>(raw)
 }
 
@@ -374,7 +382,7 @@ Return ONLY valid JSON (no markdown formatting fences, no extra text):
 }`
 
   try {
-    const raw = await callGemini(API_KEY_1, prompt)
+    const raw = await callGemini(API_KEY_2, prompt, 0, undefined, API_KEY_1)
     return parseJSON<JobCriteriaValidationResult>(raw)
   } catch {
     // Offline heuristic fallback for network or API issues
