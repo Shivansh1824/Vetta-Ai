@@ -2,13 +2,14 @@ import { useState } from 'react'
 import {
   LayoutDashboard, Briefcase, Users, ShieldCheck,
   MessageSquare, FileText, Settings,
-  ChevronLeft, ChevronRight, Menu, X, Sparkles,
+  ChevronLeft, ChevronRight, Menu, X, Sparkles, FileSpreadsheet,
 } from 'lucide-react'
 
 export type NavItem =
   | 'onboarding'
   | 'dashboard'
   | 'jobs'
+  | 'resumes'
   | 'candidates'
   | 'screening'
   | 'interview'
@@ -19,6 +20,7 @@ const NAV_ITEMS: { id: NavItem; label: string; icon: React.ReactNode; badge?: st
   { id: 'onboarding', label: 'Onboarding Intake', icon: <Sparkles size={16} />, badge: 'Flow' },
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
   { id: 'jobs', label: 'Job Posts', icon: <Briefcase size={16} /> },
+  { id: 'resumes', label: 'Resume Vault', icon: <FileSpreadsheet size={16} />, badge: 'Vault' },
   { id: 'candidates', label: 'Candidates', icon: <Users size={16} /> },
   { id: 'screening', label: 'AI Screening', icon: <ShieldCheck size={16} />, badge: 'AI' },
   { id: 'interview', label: 'Interview Cockpit', icon: <MessageSquare size={16} />, badge: 'AI' },

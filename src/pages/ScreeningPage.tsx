@@ -1,24 +1,38 @@
 import { useState, useRef, useEffect } from 'react'
 import { TopHeader } from '../components/layout/TopHeader'
-import { Upload, FileText, Loader2, CheckCircle2, AlertTriangle, Brain, ChevronDown, ChevronRight, Sparkles } from 'lucide-react'
+import {
+  Upload, Loader2, CheckCircle2, AlertTriangle,
+  Brain, ChevronDown, ChevronRight, Sparkles, Briefcase,
+} from 'lucide-react'
 import { analyzeResume, buildOfflineScreeningResult, extractAndValidateResume } from '../services/gemini'
 import type { Job, GeminiScreeningResult, Tier, RequirementStatus, FlagSeverity } from '../types'
 import { SAMPLE_CANDIDATES } from '../data/sampleCandidates'
 import type { SampleCandidate } from '../data/sampleCandidates'
+import type { NavItem } from '../components/layout/Sidebar'
 
-// Mock job for demo purposes — real version pulls from Supabase
-const MOCK_JOB: Job = {
-  id: 'demo-job-1',
-  recruiter_id: null,
-  title: 'Senior Full-Stack Engineer',
-  department: 'Engineering',
-  experience_level: '5+ years',
-  must_haves: ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'System Design'],
-  nice_to_haves: ['Kubernetes', 'Redis', 'GraphQL'],
-  description_text: 'We are looking for an experienced engineer to join our core product team...',
-  status: 'active',
-  created_at: new Date().toISOString(),
-}
+const ROLES_LIST: Job[] = [
+  {
+    id: 'demo-job-1', recruiter_id: null, title: 'Senior Full-Stack & Distributed Systems Engineer',
+    department: 'Engineering', experience_level: '5+ years',
+    must_haves: ['React 18', 'TypeScript', 'Node.js', 'PostgreSQL', 'Distributed Systems'],
+    nice_to_haves: ['Kafka', 'Redis', 'Docker'], description_text: 'Senior Full-Stack Engineer with distributed systems expertise.',
+    status: 'active', created_at: new Date().toISOString(),
+  },
+  {
+    id: 'demo-job-2', recruiter_id: null, title: 'Frontend Tech Lead & Design Systems Architect',
+    department: 'Product Experience', experience_level: '6+ years',
+    must_haves: ['React', 'TypeScript', 'Design Systems', 'State Management'],
+    nice_to_haves: ['Tailwind CSS', 'Micro-Frontends'], description_text: 'Frontend Tech Lead leading UI/UX and design system architecture.',
+    status: 'active', created_at: new Date().toISOString(),
+  },
+  {
+    id: 'demo-job-3', recruiter_id: null, title: 'DevOps & Cloud Infrastructure Engineer',
+    department: 'Infrastructure', experience_level: '3+ years',
+    must_haves: ['Kubernetes', 'CI/CD', 'AWS / Cloud Architecture'],
+    nice_to_haves: ['Terraform', 'Prometheus'], description_text: 'DevOps & Cloud Engineer managing CI/CD and cloud infra.',
+    status: 'active', created_at: new Date().toISOString(),
+  },
+]
 
 const TIER_CONFIG: Record<Tier, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   tier_1_match: { label: 'Tier 1 — Top Match', color: 'var(--color-emerald)', bg: 'var(--color-emerald-subtle)', icon: <CheckCircle2 size={16} /> },
@@ -29,7 +43,12 @@ const TIER_CONFIG: Record<Tier, { label: string; color: string; bg: string; icon
 const STATUS_COLORS: Record<RequirementStatus, string> = { met: 'var(--color-emerald)', partial: 'var(--color-amber)', missing: 'var(--color-rose)' }
 const SEVERITY_COLORS: Record<FlagSeverity, string> = { high: 'var(--color-rose)', medium: 'var(--color-amber)', low: 'var(--color-text-muted)' }
 
-export function ScreeningPage() {
+export interface ScreeningPageProps {
+  onNavigate?: (page: NavItem) => void
+}
+
+export function ScreeningPage({ onNavigate }: ScreeningPageProps = {}) {
+  const [selectedRole, setSelectedRole] = useState<Job>(ROLES_LIST[0])
   const [resumeText, setResumeText] = useState('')
   const [candidateName, setCandidateName] = useState('')
   const [isSample, setIsSample] = useState(false)
@@ -132,11 +151,11 @@ export function ScreeningPage() {
     setLoading(true)
     setResult(null)
     try {
-      const res = await analyzeResume(resumeText, MOCK_JOB)
+      const res = await analyzeResume(resumeText, selectedRole)
       setResult(res)
     } catch {
       // Graceful fallback for network or API issues
-      const offline = buildOfflineScreeningResult(resumeText, MOCK_JOB)
+      const offline = buildOfflineScreeningResult(resumeText, selectedRole)
       setResult(offline)
       setError('Gemini API reached limit/offline — displaying offline analysis.')
     } finally {
@@ -155,7 +174,7 @@ export function ScreeningPage() {
 
       <main style={{ flex: 1, padding: '14px 20px', minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-        {/* Top Control Bar: Target Role + Demo Candidates + Upload on 1 Screen */}
+        {/* Top Control Bar: Target Role Selector + Demo Candidates + Upload on 1 Screen */}
         <div style={{
           background: 'var(--color-surface)', border: '1px solid var(--color-border)',
           borderRadius: 'var(--radius-lg)', padding: '10px 16px', boxShadow: 'var(--shadow-xs)',
@@ -164,18 +183,38 @@ export function ScreeningPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
-              width: 30, height: 30, borderRadius: 8,
+              width: 32, height: 32, borderRadius: 8,
               background: 'var(--color-accent-subtle)', color: 'var(--color-accent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}>
-              <FileText size={15} />
+              <Briefcase size={16} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 'var(--text-xs)', color: 'var(--color-text-primary)' }}>
-                Target Role: {MOCK_JOB.title}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+                  Target Role:
+                </span>
+                <select
+                  value={selectedRole.id}
+                  onChange={e => {
+                    const found = ROLES_LIST.find(r => r.id === e.target.value)
+                    if (found) setSelectedRole(found)
+                  }}
+                  style={{
+                    padding: '2px 8px', borderRadius: 4,
+                    border: '1px solid var(--color-border)',
+                    background: 'var(--color-surface-elevated)',
+                    fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)',
+                    outline: 'none', cursor: 'pointer',
+                  }}
+                >
+                  {ROLES_LIST.map(r => (
+                    <option key={r.id} value={r.id}>{r.title}</option>
+                  ))}
+                </select>
               </div>
-              <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
-                Must-haves: {MOCK_JOB.must_haves.slice(0, 4).join(', ')}…
+              <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 2 }}>
+                Must-haves: {selectedRole.must_haves.slice(0, 4).join(', ')}…
               </div>
             </div>
           </div>
@@ -458,10 +497,37 @@ export function ScreeningPage() {
                   )}
                 </div>
               )}
+
+              {/* Send to Interview Cockpit CTA */}
+              <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                <button
+                  onClick={() => onNavigate?.('interview')}
+                  style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                    padding: '10px 14px', borderRadius: 'var(--radius-md)',
+                    background: 'linear-gradient(135deg, hsl(231,76%,52%), hsl(231,76%,46%))',
+                    color: '#fff', border: 'none', fontWeight: 800, fontSize: 'var(--text-xs)',
+                    cursor: 'pointer', boxShadow: '0 2px 10px hsla(231,76%,52%,0.25)',
+                  }}
+                >
+                  <Sparkles size={14} />
+                  <span>Send to Interview Cockpit →</span>
+                </button>
+                <button
+                  onClick={() => onNavigate?.('reports')}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    padding: '10px 14px', borderRadius: 'var(--radius-md)',
+                    background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-primary)', fontWeight: 700, fontSize: 'var(--text-xs)', cursor: 'pointer',
+                  }}
+                >
+                  <span>View Reports</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
-          /* Single Editor Card when No Results: Fits comfortably on 1 screen */
           <div style={{
             background: 'var(--color-surface)', border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-lg)', padding: '18px 22px', boxShadow: 'var(--shadow-xs)',
@@ -494,11 +560,7 @@ export function ScreeningPage() {
               }}
             />
 
-            {error && (
-              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-rose)', fontWeight: 700 }}>
-                {error}
-              </div>
-            )}
+            {error && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-rose)', fontWeight: 700 }}>{error}</div>}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
@@ -508,12 +570,10 @@ export function ScreeningPage() {
                 onClick={handleRun}
                 disabled={loading}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '9px 22px',
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '9px 22px',
                   background: loading ? 'var(--color-border)' : 'linear-gradient(135deg, hsl(231,76%,52%), hsl(231,76%,46%))',
                   color: '#fff', border: 'none', borderRadius: 'var(--radius-md)',
-                  fontSize: 'var(--text-sm)', fontWeight: 800,
-                  cursor: loading ? 'not-allowed' : 'pointer',
+                  fontSize: 'var(--text-sm)', fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer',
                   boxShadow: loading ? 'none' : '0 2px 10px hsla(231,76%,52%,0.25)',
                 }}
               >

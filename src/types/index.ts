@@ -112,7 +112,14 @@ export interface GeminiScreeningResult {
 }
 
 export interface GeminiInterviewResult {
-  questions: { question_text: string; target_criterion: string; difficulty: QuestionDifficulty }[]
+  candidate_summary?: string
+  questions: {
+    question_text: string
+    target_criterion: string
+    difficulty: QuestionDifficulty
+    what_to_listen_for?: string
+    follow_up?: string
+  }[]
 }
 
 export interface ResumeExtractionResult {

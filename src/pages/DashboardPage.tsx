@@ -5,6 +5,7 @@ import {
   ArrowRight, CheckCircle2, AlertTriangle, Minus
 } from 'lucide-react'
 import { TopHeader } from '../components/layout/TopHeader'
+import type { NavItem } from '../components/layout/Sidebar'
 
 const RECENT_CANDIDATES = [
   { name: 'Arjun Mehta', role: 'Senior Full-Stack Engineer', score: 94, tier: 'tier_1_match', time: '2 min ago' },
@@ -22,6 +23,7 @@ const TIER_STYLES: Record<string, { bg: string; color: string; label: string; ic
 
 export interface DashboardProps {
   onOpenOnboarding?: () => void
+  onNavigate?: (page: NavItem) => void
   customData?: {
     recruiterName?: string
     companyName?: string
@@ -36,7 +38,7 @@ export interface DashboardProps {
   }
 }
 
-export function DashboardPage({ onOpenOnboarding, customData }: DashboardProps) {
+export function DashboardPage({ onOpenOnboarding, onNavigate, customData }: DashboardProps) {
   const pageRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -290,21 +292,44 @@ export function DashboardPage({ onOpenOnboarding, customData }: DashboardProps) 
                 Quick Actions
               </div>
               {[
-                { label: 'Post a new job', icon: <Briefcase size={14} />, accent: true },
-                { label: 'Upload resumes', icon: <Users size={14} />, accent: false },
-                { label: 'Run AI screening', icon: <ShieldCheck size={14} />, accent: false },
-                { label: 'View reports', icon: <TrendingUp size={14} />, accent: false },
+                {
+                  label: 'Post a new job',
+                  icon: <Briefcase size={14} />,
+                  accent: true,
+                  onClick: () => (onOpenOnboarding ? onOpenOnboarding() : onNavigate?.('jobs')),
+                },
+                {
+                  label: 'Upload resumes',
+                  icon: <Users size={14} />,
+                  accent: false,
+                  onClick: () => onNavigate?.('resumes'),
+                },
+                {
+                  label: 'Run AI screening',
+                  icon: <ShieldCheck size={14} />,
+                  accent: false,
+                  onClick: () => (onOpenOnboarding ? onOpenOnboarding() : onNavigate?.('screening')),
+                },
+                {
+                  label: 'View reports',
+                  icon: <TrendingUp size={14} />,
+                  accent: false,
+                  onClick: () => onNavigate?.('reports'),
+                },
               ].map(a => (
-                <button key={a.label} style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '9px 12px', marginBottom: 6,
-                  background: a.accent ? 'var(--color-accent-subtle)' : 'var(--color-surface-elevated)',
-                  border: `1px solid ${a.accent ? 'var(--color-accent-border)' : 'var(--color-border)'}`,
-                  borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer', color: a.accent ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-                  fontSize: 'var(--text-sm)', fontWeight: 600,
-                  textAlign: 'left', transition: 'all 0.15s',
-                }}
+                <button
+                  key={a.label}
+                  onClick={a.onClick}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '9px 12px', marginBottom: 6,
+                    background: a.accent ? 'var(--color-accent-subtle)' : 'var(--color-surface-elevated)',
+                    border: `1px solid ${a.accent ? 'var(--color-accent-border)' : 'var(--color-border)'}`,
+                    borderRadius: 'var(--radius-md)',
+                    cursor: 'pointer', color: a.accent ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                    fontSize: 'var(--text-sm)', fontWeight: 600,
+                    textAlign: 'left', transition: 'all 0.15s',
+                  }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateX(2px)' }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'translateX(0)' }}
                 >
