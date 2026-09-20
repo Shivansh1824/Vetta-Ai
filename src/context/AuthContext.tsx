@@ -23,6 +23,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(data.session)
       setUser(data.session?.user ?? null)
       setLoading(false)
+    }).catch(() => {
+      setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => {
@@ -34,17 +36,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+    if (data?.user) {
+      setUser(data.user)
+      setSession(data.session)
+    }
   }
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password })
+    const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
+    if (data?.user) {
+      setUser(data.user)
+      setSession(data.session)
+    }
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch (err) {
+      console.warn('SignOut warning:', err)
+    } finally {
+      setUser(null)
+      setSession(null)
+      try {
+        Object.keys(localStorage).forEach((k) => {
+          if (k.startsWith('sb-') || k.includes('supabase') || k.includes('auth')) {
+            localStorage.removeItem(k)
+          }
+        })
+        sessionStorage.clear()
+      } catch {}
+    }
   }
 
   return (

@@ -86,7 +86,11 @@ export function TopHeader({ title, subtitle }: TopHeaderProps) {
 
         {/* Dedicated Sign out button in top header */}
         <button
-          onClick={signOut}
+          onClick={async (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            await signOut()
+          }}
           type="button"
           title="Sign out of Vetta AI"
           style={{
