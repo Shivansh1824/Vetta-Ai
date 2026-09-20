@@ -104,7 +104,7 @@ JSON SCHEMA:
         success = true
         break
       } catch (err) {
-        console.error(`Failed with model ${requestedModel}, trying next...`)
+        console.error(`Failed with model ${requestedModel}, error:`, err)
       }
     }
 

@@ -69,7 +69,7 @@ Return ONLY valid JSON matching this schema:
       })
     }
 
-    const contentPrompt = text ? `${prompt}\n\nDOCUMENT TEXT CONTENT:\n${text.substring(0, 12000)}` : prompt
+    const contentPrompt = text ? `${prompt}\n\nDOCUMENT FILENAME: ${fileName || 'Uploaded Document'}\nDOCUMENT TEXT CONTENT:\n${text.substring(0, 12000)}` : prompt
     parts.push({ text: contentPrompt })
 
     const models = ['gemini-3.8-flash', 'gemini-3.6-flash']
@@ -105,7 +105,7 @@ Return ONLY valid JSON matching this schema:
         success = true
         break
       } catch (err) {
-        console.error(`Failed with model ${requestedModel}, trying next...`)
+        console.error(`Failed with model ${requestedModel}, error:`, err)
       }
     }
 
