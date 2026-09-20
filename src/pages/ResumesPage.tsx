@@ -8,6 +8,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { extractAndValidateResume, buildOfflineExtractionResult } from '../services/gemini'
 import { parseDocumentFile } from '../utils/documentParser'
+import { saveCandidateToDatabase } from '../services/candidateStorage'
 import type { NavItem } from '../components/layout/Sidebar'
 
 export interface StoredResume {
@@ -146,9 +147,20 @@ export function ResumesPage({ onNavigate, initialSelectedResumeId }: ResumesPage
 
     const fallbackName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
     const name = res.candidate_name || fallbackName
-    const role = res.current_title || 'Software Engineer'
+    const role = res.current_title || 'Candidate'
     const skills = (res.skills && res.skills.length > 0) ? res.skills : ['Engineering', 'Software Development']
     const text = res.formatted_resume_text || res.summary || rawText || `Candidate Resume: ${name}\nFile: ${file.name}`
+
+    // Persist directly to Supabase candidates database table
+    saveCandidateToDatabase({
+      name,
+      currentTitle: role,
+      resumeText: text,
+      summary: res.summary || text.slice(0, 300),
+      matchScore: 0,
+      tier: 'tier_2_potential',
+      rawJson: res.raw_json || res,
+    }).catch(err => console.warn('Database save warning:', err))
 
     saveNewResume(file, name, role, skills, text)
   }
@@ -163,19 +175,19 @@ export function ResumesPage({ onNavigate, initialSelectedResumeId }: ResumesPage
     const newResume: StoredResume = {
       id: 'res-' + Date.now(),
       candidateName: name,
-      targetRole: targetRole || 'Senior Full-Stack Engineer',
+      targetRole: targetRole || 'Candidate',
       fileName: file.name,
       fileSize: `${Math.round(file.size / 1024)} KB`,
       uploadedAt: 'Just now',
       matchScore: null,
       tier: null,
-      skills: skills.length > 0 ? skills : ['React', 'TypeScript', 'Node.js', 'System Architecture'],
+      skills: skills.length > 0 ? skills : ['General Competencies'],
       resumeText: text || `Candidate Resume: ${name}\nFile: ${file.name}`,
     }
 
     setResumes(prev => [newResume, ...prev])
     setUploading(false)
-    setUploadSuccess(`Successfully uploaded and indexed "${file.name}" into the database.`)
+    setUploadSuccess(`Successfully uploaded, parsed via Gemini OCR, and saved "${file.name}" to the Supabase database.`)
     setViewingResume(newResume)
   }
 

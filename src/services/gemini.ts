@@ -68,7 +68,9 @@ async function callGemini(
     }
 
     const data = await res.json()
-    return data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+    const resParts = data.candidates?.[0]?.content?.parts
+    const textPart = Array.isArray(resParts) ? resParts.find((p: any) => typeof p.text === 'string')?.text : undefined
+    return textPart ?? ''
   } catch (err) {
     if (modelIndex < AVAILABLE_MODELS.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, 350))
@@ -82,7 +84,11 @@ async function callGemini(
 }
 
 function parseJSON<T>(raw: string): T {
-  // Strip markdown fences or extra spacing if present
+  // Extract JSON object or array even if wrapped in markdown or conversational prose
+  const jsonMatch = raw.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
+  if (jsonMatch) {
+    return JSON.parse(jsonMatch[0]) as T
+  }
   const cleaned = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim()
   return JSON.parse(cleaned) as T
 }
@@ -151,37 +157,18 @@ export function buildOfflineExtractionResult(
 ): ResumeExtractionResult {
   const cleanFileName = fileName || 'Uploaded Document'
   const baseName = cleanFileName.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ')
-  const isGeneric = ['resume', 'cv', 'document', 'file'].includes(baseName.toLowerCase().trim())
-  const candidate_name = isGeneric ? 'Alex Rivera' : baseName
+  const candidate_name = baseName.trim() || 'Candidate'
 
   const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
   const phoneMatch = text.match(/(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/)
 
   const commonSkills = ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Distributed Systems', 'Docker', 'Kubernetes', 'Redis', 'Python', 'AWS']
   const matchedSkills = commonSkills.filter(s => text.toLowerCase().includes(s.toLowerCase()))
-  const skills = matchedSkills.length >= 3 ? matchedSkills : ['React', 'TypeScript', 'Node.js', 'Distributed Systems', 'PostgreSQL']
+  const skills = matchedSkills.length > 0 ? matchedSkills : ['General Technical Skills']
 
   const formatted_resume_text = text && text.trim().length > 40 && text !== fileName
     ? text
-    : `${candidate_name.toUpperCase()}
-San Francisco, CA | ${emailMatch ? emailMatch[0] : `${candidate_name.toLowerCase().replace(/\s+/g, '.')}@candidate.io`} | ${phoneMatch ? phoneMatch[0] : '+1 (555) 349-9201'}
-
-PROFESSIONAL SUMMARY:
-Senior Full-Stack & Distributed Systems Engineer with 6+ years of experience designing high-throughput microservices, scalable database pipelines, and reactive React applications.
-
-TECHNICAL SKILLS:
-${skills.join(', ')}
-
-EXPERIENCE:
-Senior Systems Engineer | Apex Cloud Systems (2022 - Present)
-- Architected resilient microservices handling high-throughput event processing.
-- Scaled relational databases and distributed cache layers.
-
-Software Engineer | Nexus Labs (2019 - 2022)
-- Engineered responsive React and TypeScript frontends with stateful WebSocket integrations.
-
-EDUCATION:
-B.S. in Computer Science | University of California (2019)`
+    : `Candidate: ${candidate_name}\nFile: ${cleanFileName}\n\nIngested resume document content for ${candidate_name}.`
 
   const result: ResumeExtractionResult = {
     is_resume: true,
