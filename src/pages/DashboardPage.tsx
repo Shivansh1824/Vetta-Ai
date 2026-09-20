@@ -6,13 +6,6 @@ import {
 } from 'lucide-react'
 import { TopHeader } from '../components/layout/TopHeader'
 
-const STATS = [
-  { label: 'Active Jobs', value: '3', icon: <Briefcase size={18} />, color: 'var(--color-accent)', bg: 'var(--color-accent-subtle)' },
-  { label: 'Candidates Screened', value: '24', icon: <Users size={18} />, color: 'var(--color-emerald)', bg: 'var(--color-emerald-subtle)' },
-  { label: 'Tier 1 Matches', value: '8', icon: <CheckCircle2 size={18} />, color: 'var(--color-emerald)', bg: 'var(--color-emerald-subtle)' },
-  { label: 'Flags Detected', value: '5', icon: <AlertTriangle size={18} />, color: 'var(--color-amber)', bg: 'var(--color-amber-subtle)' },
-]
-
 const RECENT_CANDIDATES = [
   { name: 'Arjun Mehta', role: 'Senior Full-Stack Engineer', score: 94, tier: 'tier_1_match', time: '2 min ago' },
   { name: 'Elena Rostova', role: 'Frontend Tech Lead', score: 82, tier: 'tier_1_match', time: '14 min ago' },
@@ -21,13 +14,29 @@ const RECENT_CANDIDATES = [
   { name: 'David Kim', role: 'Junior Developer', score: 31, tier: 'tier_3_mismatch', time: '3 hr ago' },
 ]
 
-const TIER_STYLES = {
+const TIER_STYLES: Record<string, { bg: string; color: string; label: string; icon: React.ReactNode }> = {
   tier_1_match: { bg: 'var(--color-emerald-subtle)', color: 'var(--color-emerald)', label: 'Top Match', icon: <CheckCircle2 size={11} /> },
   tier_2_potential: { bg: 'var(--color-amber-subtle)', color: 'var(--color-amber)', label: 'Review', icon: <Minus size={11} /> },
   tier_3_mismatch: { bg: 'var(--color-rose-subtle)', color: 'var(--color-rose)', label: 'Mismatch', icon: <AlertTriangle size={11} /> },
 }
 
-export function DashboardPage() {
+export interface DashboardProps {
+  onOpenOnboarding?: () => void
+  customData?: {
+    recruiterName?: string
+    companyName?: string
+    roleTitle?: string
+    jobTitle?: string
+    newCandidate?: {
+      name: string
+      role: string
+      score: number
+      tier: 'tier_1_match' | 'tier_2_potential' | 'tier_3_mismatch'
+    }
+  }
+}
+
+export function DashboardPage({ onOpenOnboarding, customData }: DashboardProps) {
   const pageRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -38,18 +47,84 @@ export function DashboardPage() {
     return () => ctx.revert()
   }, [])
 
+  const recruiterName = customData?.recruiterName || 'Sarah Chen'
+  const companyName = customData?.companyName || 'Vetta AI Labs'
+  const jobTitle = customData?.jobTitle || 'Senior Full-Stack & Distributed Systems Engineer'
+
+  // If newly onboarded candidate exists, prepend to candidates list
+  const candidatesList = customData?.newCandidate
+    ? [
+        {
+          name: customData.newCandidate.name,
+          role: customData.newCandidate.role,
+          score: customData.newCandidate.score,
+          tier: customData.newCandidate.tier,
+          time: 'Just now (Live Onboarded)',
+        },
+        ...RECENT_CANDIDATES,
+      ]
+    : RECENT_CANDIDATES
+
+  const statsList = [
+    { label: 'Active Jobs', value: '3', icon: <Briefcase size={18} />, color: 'var(--color-accent)', bg: 'var(--color-accent-subtle)' },
+    { label: 'Candidates Screened', value: customData?.newCandidate ? '25' : '24', icon: <Users size={18} />, color: 'var(--color-emerald)', bg: 'var(--color-emerald-subtle)' },
+    { label: 'Tier 1 Matches', value: customData?.newCandidate && customData.newCandidate.tier === 'tier_1_match' ? '9' : '8', icon: <CheckCircle2 size={18} />, color: 'var(--color-emerald)', bg: 'var(--color-emerald-subtle)' },
+    { label: 'Flags Detected', value: '5', icon: <AlertTriangle size={18} />, color: 'var(--color-amber)', bg: 'var(--color-amber-subtle)' },
+  ]
+
   return (
     <div ref={pageRef} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <TopHeader title="Dashboard" subtitle="Welcome back — here's your hiring pipeline at a glance." />
+      <TopHeader title="Dashboard" subtitle={`Welcome back, ${recruiterName} — here is your ${companyName} hiring pipeline.`} />
 
       <main style={{ flex: 1, padding: '28px 28px', overflowY: 'auto' }}>
+
+        {/* Live Workspace Status Banner */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 18px', borderRadius: 'var(--radius-lg)',
+          background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+          marginBottom: 22, boxShadow: 'var(--shadow-sm)', flexWrap: 'wrap', gap: 12,
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+              <span style={{
+                background: 'var(--color-emerald-subtle)', color: 'var(--color-emerald)',
+                fontSize: 10, fontWeight: 900, padding: '2px 8px', borderRadius: 4,
+              }}>
+                ACTIVE RECRUITER WORKSPACE
+              </span>
+              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-text-primary)' }}>
+                {companyName} • {recruiterName} ({customData?.roleTitle || 'Lead Technical Recruiter'})
+              </span>
+            </div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+              Target Active Role: <strong>{jobTitle}</strong>
+            </div>
+          </div>
+
+          {onOpenOnboarding && (
+            <button
+              type="button"
+              onClick={onOpenOnboarding}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '7px 14px', borderRadius: 'var(--radius-md)',
+                background: 'var(--color-accent-subtle)', border: '1px solid var(--color-accent)',
+                color: 'var(--color-accent)', fontSize: 'var(--text-xs)', fontWeight: 800,
+                cursor: 'pointer',
+              }}
+            >
+              ⚡ Re-run Onboarding Modal
+            </button>
+          )}
+        </div>
 
         {/* Stats grid */}
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
           gap: 16, marginBottom: 28,
         }}>
-          {STATS.map(stat => (
+          {statsList.map(stat => (
             <div key={stat.label} className="dash-stat" style={{
               background: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
@@ -113,13 +188,13 @@ export function DashboardPage() {
             </div>
 
             <div>
-              {RECENT_CANDIDATES.map((c, i) => {
+              {candidatesList.map((c, i) => {
                 const tier = TIER_STYLES[c.tier as keyof typeof TIER_STYLES]
                 return (
                   <div key={c.name} style={{
                     display: 'flex', alignItems: 'center', gap: 14,
                     padding: '14px 20px',
-                    borderBottom: i < RECENT_CANDIDATES.length - 1 ? '1px solid var(--color-border)' : 'none',
+                    borderBottom: i < candidatesList.length - 1 ? '1px solid var(--color-border)' : 'none',
                     transition: 'background 0.15s',
                     cursor: 'pointer',
                   }}

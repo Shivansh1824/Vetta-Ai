@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Sidebar } from './components/layout/Sidebar'
 import type { NavItem } from './components/layout/Sidebar'
 import { DashboardPage } from './pages/DashboardPage'
@@ -5,9 +6,8 @@ import { JobsPage } from './pages/JobsPage'
 import { ScreeningPage } from './pages/ScreeningPage'
 import { InterviewPage } from './pages/InterviewPage'
 import { TopHeader } from './components/layout/TopHeader'
-import { useState } from 'react'
-
-import { OnboardingFlow } from './components/onboarding/OnboardingFlow'
+import { RecruiterOnboardingModal } from './components/onboarding/RecruiterOnboardingModal'
+import type { GeminiScreeningResult } from './types'
 
 // Lightweight placeholder for pages not yet built
 function PlaceholderPage({ title, subtitle }: { title: string; subtitle: string }) {
@@ -35,7 +35,7 @@ function PlaceholderPage({ title, subtitle }: { title: string; subtitle: string 
 }
 
 const PAGE_SUBTITLES: Record<NavItem, { title: string; subtitle: string }> = {
-  onboarding: { title: 'Onboarding Intake', subtitle: 'Step-by-step role and candidate screening flow.' },
+  onboarding: { title: 'Recruiter Onboarding', subtitle: 'Interactive 4-step recruiter setup and candidate intake.' },
   dashboard: { title: 'Dashboard', subtitle: 'Your hiring pipeline at a glance.' },
   jobs: { title: 'Job Posts', subtitle: 'Manage your open positions.' },
   candidates: { title: 'Candidates', subtitle: 'All candidates across active roles.' },
@@ -46,21 +46,65 @@ const PAGE_SUBTITLES: Record<NavItem, { title: string; subtitle: string }> = {
 }
 
 export function AppShell() {
-  const [activePage, setActivePage] = useState<NavItem>('onboarding')
+  const [activePage, setActivePage] = useState<NavItem>('dashboard')
+  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(true)
+
+  const [dashboardData, setDashboardData] = useState<{
+    recruiterName?: string
+    companyName?: string
+    roleTitle?: string
+    jobTitle?: string
+    newCandidate?: {
+      name: string
+      role: string
+      score: number
+      tier: 'tier_1_match' | 'tier_2_potential' | 'tier_3_mismatch'
+    }
+  }>({
+    recruiterName: 'Sarah Chen',
+    companyName: 'Vetta AI Labs',
+    roleTitle: 'Lead Technical Recruiter',
+    jobTitle: 'Senior Full-Stack & Distributed Systems Engineer',
+  })
+
+  const handleOnboardingComplete = (data: {
+    recruiter: { fullName: string; companyName: string; roleTitle: string }
+    job: { title: string }
+    candidate: { candidateName: string }
+    screeningResult: GeminiScreeningResult | null
+  }) => {
+    setDashboardData({
+      recruiterName: data.recruiter.fullName,
+      companyName: data.recruiter.companyName,
+      roleTitle: data.recruiter.roleTitle,
+      jobTitle: data.job.title,
+      newCandidate: {
+        name: data.candidate.candidateName || 'Arjun Mehta',
+        role: data.job.title,
+        score: data.screeningResult?.match_score ?? 94,
+        tier: data.screeningResult?.tier ?? 'tier_1_match',
+      },
+    })
+    setActivePage('dashboard')
+  }
+
+  const handleNavigate = (page: NavItem) => {
+    if (page === 'onboarding') {
+      setIsOnboardingModalOpen(true)
+      return
+    }
+    setActivePage(page)
+  }
 
   const renderPage = () => {
     switch (activePage) {
-      case 'onboarding':
+      case 'dashboard':
         return (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-            <TopHeader title="Candidate Intake & Onboarding" subtitle="Configure target position, upload resumes or test with pre-built sample candidate data." />
-            <OnboardingFlow
-              onNavigateToInterview={() => setActivePage('interview')}
-              onNavigateToDashboard={() => setActivePage('dashboard')}
-            />
-          </div>
+          <DashboardPage
+            onOpenOnboarding={() => setIsOnboardingModalOpen(true)}
+            customData={dashboardData}
+          />
         )
-      case 'dashboard': return <DashboardPage />
       case 'jobs': return <JobsPage />
       case 'screening': return <ScreeningPage />
       case 'interview': return <InterviewPage />
@@ -73,10 +117,18 @@ export function AppShell() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--color-bg)' }}>
-      <Sidebar active={activePage} onNavigate={setActivePage} />
+      <Sidebar active={activePage} onNavigate={handleNavigate} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {renderPage()}
       </div>
+
+      {/* Recruiter Onboarding Modal Flow */}
+      <RecruiterOnboardingModal
+        isOpen={isOnboardingModalOpen}
+        onClose={() => setIsOnboardingModalOpen(false)}
+        onComplete={handleOnboardingComplete}
+        onGoToInterview={() => setActivePage('interview')}
+      />
     </div>
   )
 }
